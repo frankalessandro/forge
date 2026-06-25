@@ -34,17 +34,17 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Crear cuenta</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="w-full max-w-md bg-gray-900 rounded-2xl shadow p-8">
+        <h1 className="text-2xl font-bold text-gray-100 mb-6">Crear cuenta</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
             <input
               type="email"
               {...register('email')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="tu@email.com"
             />
             {errors.email && (
@@ -53,11 +53,11 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
             <input
               type="password"
               {...register('password')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="••••••••"
             />
             {errors.password && (
@@ -66,11 +66,11 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Confirmar contraseña</label>
             <input
               type="password"
               {...register('confirmPassword')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="••••••••"
             />
             {errors.confirmPassword && (
@@ -91,7 +91,7 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="text-sm text-gray-600 text-center mt-4">
+        <p className="text-sm text-gray-400 text-center mt-4">
           ¿Ya tenés cuenta?{' '}
           <Link to="/login" className="text-indigo-600 hover:underline font-medium">
             Iniciá sesión

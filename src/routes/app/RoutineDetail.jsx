@@ -11,7 +11,7 @@ const CATEGORY_COLORS = {
 }
 
 function CategoryBadge({ category }) {
-  const cls = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-700'
+  const cls = CATEGORY_COLORS[category] ?? 'bg-gray-800 text-gray-300'
   return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{category}</span>
 }
 
@@ -19,14 +19,14 @@ function SkeletonDetail() {
   return (
     <div className="animate-pulse space-y-6">
       <div className="space-y-2">
-        <div className="h-6 bg-gray-200 rounded w-56" />
-        <div className="h-4 bg-gray-100 rounded w-80" />
+        <div className="h-6 bg-gray-800 rounded w-56" />
+        <div className="h-4 bg-gray-800 rounded w-80" />
       </div>
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-xl px-5 py-4">
-            <div className="h-4 bg-gray-200 rounded w-48 mb-2" />
-            <div className="h-3 bg-gray-100 rounded w-32" />
+          <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4">
+            <div className="h-4 bg-gray-800 rounded w-48 mb-2" />
+            <div className="h-3 bg-gray-800 rounded w-32" />
           </div>
         ))}
       </div>
@@ -70,13 +70,13 @@ export default function RoutineDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-950">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <Link to="/app/routines" className="text-gray-500 hover:text-gray-900 transition-colors">
+          <Link to="/app/routines" className="text-gray-500 hover:text-gray-100 transition-colors">
             <ArrowLeft size={20} />
           </Link>
-          <h1 className="text-lg font-bold text-gray-900">Detalle de rutina</h1>
+          <h1 className="text-lg font-bold text-gray-100">Detalle de rutina</h1>
         </div>
       </header>
 
@@ -91,7 +91,7 @@ export default function RoutineDetail() {
           <>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold text-gray-900">{routine.name}</h2>
+                <h2 className="text-xl font-bold text-gray-100">{routine.name}</h2>
                 <CategoryBadge category={routine.category} />
               </div>
               {routine.description && <p className="text-gray-500">{routine.description}</p>}
@@ -99,16 +99,16 @@ export default function RoutineDetail() {
 
             <div className="space-y-3">
               {routine.routine_exercises.map((re) => (
-                <div key={re.id} className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4">
-                  <span className="text-sm font-bold text-gray-400 w-5 shrink-0">{re.order}</span>
+                <div key={re.id} className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center gap-4">
+                  <span className="text-sm font-bold text-gray-500 w-5 shrink-0">{re.order}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{re.exercises?.name}</p>
+                    <p className="font-semibold text-gray-100 truncate">{re.exercises?.name}</p>
                     <p className="text-sm text-gray-500">
                       {re.sets} series × {re.reps} reps · {re.rest_seconds}s descanso
                     </p>
                   </div>
                   {re.exercises?.muscle_groups?.name && (
-                    <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-xs font-medium bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full shrink-0">
                       {re.exercises.muscle_groups.name}
                     </span>
                   )}
@@ -119,7 +119,7 @@ export default function RoutineDetail() {
             <button
               onClick={handleStart}
               disabled={starting}
-              className="w-full flex items-center justify-center gap-3 bg-gray-900 text-white rounded-xl px-6 py-4 font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-3 bg-indigo-600 text-white rounded-xl px-6 py-4 font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
             >
               <Play size={18} fill="white" />
               {starting ? 'Iniciando...' : 'Iniciar entrenamiento'}

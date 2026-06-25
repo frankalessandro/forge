@@ -4,7 +4,7 @@ import { useExercise } from '../../hooks/useExercises'
 
 function Badge({ children }) {
   return (
-    <span className="inline-block bg-gray-100 text-gray-700 text-sm rounded-full px-3 py-1">
+    <span className="inline-block bg-gray-800 text-gray-300 text-sm rounded-full px-3 py-1">
       {children}
     </span>
   )
@@ -13,15 +13,15 @@ function Badge({ children }) {
 function SkeletonDetail() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-7 bg-gray-200 rounded w-1/2" />
+      <div className="h-7 bg-gray-800 rounded w-1/2" />
       <div className="flex gap-2">
-        <div className="h-6 bg-gray-100 rounded-full w-24" />
-        <div className="h-6 bg-gray-100 rounded-full w-20" />
+        <div className="h-6 bg-gray-800 rounded-full w-24" />
+        <div className="h-6 bg-gray-800 rounded-full w-20" />
       </div>
       <div className="space-y-2">
-        <div className="h-4 bg-gray-100 rounded w-full" />
-        <div className="h-4 bg-gray-100 rounded w-5/6" />
-        <div className="h-4 bg-gray-100 rounded w-4/6" />
+        <div className="h-4 bg-gray-800 rounded w-full" />
+        <div className="h-4 bg-gray-800 rounded w-5/6" />
+        <div className="h-4 bg-gray-800 rounded w-4/6" />
       </div>
     </div>
   )
@@ -33,12 +33,12 @@ export default function ExerciseDetail() {
   const { exercise, loading, error } = useExercise(id)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-950">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-100 transition-colors"
           >
             <ArrowLeft size={16} />
             Volver a ejercicios
@@ -56,7 +56,7 @@ export default function ExerciseDetail() {
         {!loading && !error && exercise && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">{exercise.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-100 mb-3">{exercise.name}</h1>
               <div className="flex flex-wrap gap-2">
                 {exercise.category && <Badge>{exercise.category}</Badge>}
                 {exercise.muscle_groups && <Badge>{exercise.muscle_groups.name}</Badge>}
@@ -67,7 +67,7 @@ export default function ExerciseDetail() {
             {exercise.description && (
               <div>
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Descripción</h2>
-                <p className="text-gray-700 leading-relaxed">{exercise.description}</p>
+                <p className="text-gray-300 leading-relaxed">{exercise.description}</p>
               </div>
             )}
 

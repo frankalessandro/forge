@@ -60,21 +60,21 @@ function RestTimerBar({ remaining, duration, onSkip, onAdd30 }) {
   const label = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 
   return (
-    <div className="bg-gray-900 text-white px-6 py-2">
+    <div className="bg-gray-900 border-b border-gray-800 text-white px-6 py-2">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-1.5">
-          <Timer size={14} className="text-gray-400 shrink-0" />
-          <span className="text-xs text-gray-400 flex-1">Descanso</span>
+          <Timer size={14} className="text-gray-500 shrink-0" />
+          <span className="text-xs text-gray-500 flex-1">Descanso</span>
           <span className="font-mono font-bold tabular-nums text-sm">{label}</span>
           <button
             onClick={onAdd30}
-            className="text-xs text-gray-400 hover:text-white transition-colors px-1"
+            className="text-xs text-gray-500 hover:text-white transition-colors px-1"
           >
             +30s
           </button>
           <button
             onClick={onSkip}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
           >
             <SkipForward size={13} />
             Saltar
@@ -96,7 +96,7 @@ function LastPerf({ sets }) {
   if (!sets?.length) return null
   return (
     <div className="flex flex-wrap gap-1 mb-2">
-      <span className="text-xs text-gray-400 mr-1">Última vez:</span>
+      <span className="text-xs text-gray-500 mr-1">Última vez:</span>
       {sets.map((s, i) => (
         <span key={i} className="text-xs bg-blue-50 text-blue-700 rounded px-1.5 py-0.5">
           {s.weight_kg ?? 0} kg × {s.reps ?? 0}
@@ -112,7 +112,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
 
   return (
     <div className={`flex items-center gap-2 py-1.5 rounded-lg px-1 ${styles.row} ${set.completed ? 'opacity-60' : ''}`}>
-      <span className="w-5 text-center text-xs font-medium text-gray-400 shrink-0">
+      <span className="w-5 text-center text-xs font-medium text-gray-500 shrink-0">
         {setIndex + 1}
       </span>
 
@@ -126,7 +126,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
             weight_kg: e.target.value === '' ? null : Number(e.target.value),
           })
         }
-        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
+        className="w-16 text-center text-sm border border-gray-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-900"
       />
 
       <input
@@ -139,7 +139,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
             reps: e.target.value === '' ? null : Number(e.target.value),
           })
         }
-        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
+        className="w-16 text-center text-sm border border-gray-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-900"
       />
 
       {/* Compact set-type toggle */}
@@ -147,7 +147,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
         <select
           value={set.set_type}
           onChange={(e) => onUpdate(exId, setIndex, { set_type: e.target.value })}
-          className={`appearance-none text-xs font-semibold rounded-lg pl-2 pr-5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 border-0 cursor-pointer ${styles.badge || 'bg-gray-100 text-gray-600'}`}
+          className={`appearance-none text-xs font-semibold rounded-lg pl-2 pr-5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 border-0 cursor-pointer ${styles.badge || 'bg-gray-800 text-gray-400'}`}
         >
           <option value="normal">Normal</option>
           <option value="warmup">Calent.</option>
@@ -165,7 +165,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
         className={`ml-auto p-1.5 rounded-lg transition-colors shrink-0 ${
           set.completed
             ? 'bg-green-500 text-white'
-            : 'border border-gray-300 text-gray-400 hover:border-green-500 hover:text-green-500'
+            : 'border border-gray-700 text-gray-500 hover:border-green-500 hover:text-green-500'
         }`}
       >
         <Check size={14} />
@@ -173,7 +173,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
 
       <button
         onClick={() => onDelete(exId, setIndex)}
-        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors shrink-0"
+        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0"
       >
         <Trash2 size={14} />
       </button>
@@ -194,12 +194,12 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
       <div className="flex items-start justify-between mb-1">
-        <h3 className="font-semibold text-gray-900">{exercise.name}</h3>
+        <h3 className="font-semibold text-gray-100">{exercise.name}</h3>
         <button
           onClick={() => onDeleteExercise(exercise.exerciseId)}
-          className="text-gray-300 hover:text-red-500 transition-colors p-1 -mr-1 -mt-1"
+          className="text-gray-400 hover:text-red-500 transition-colors p-1 -mr-1 -mt-1"
         >
           <Trash2 size={16} />
         </button>
@@ -209,7 +209,7 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
 
       {exercise.sets.length > 0 && (
         <div className="mb-2">
-          <div className="flex items-center gap-2 py-1 px-1 text-xs text-gray-400 font-medium">
+          <div className="flex items-center gap-2 py-1 px-1 text-xs text-gray-500 font-medium">
             <span className="w-5 text-center">#</span>
             <span className="w-16 text-center">kg</span>
             <span className="w-16 text-center">reps</span>
@@ -231,7 +231,7 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
 
       <button
         onClick={handleAddSet}
-        className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 hover:border-gray-400 rounded-lg py-2 transition-colors mt-1"
+        className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-100 border border-dashed border-gray-700 hover:border-gray-600 rounded-lg py-2 transition-colors mt-1"
       >
         <Plus size={14} />
         Agregar serie
@@ -244,21 +244,21 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
 function StatsBar({ exercises, elapsed }) {
   const { completedSets, volume } = calcStats(exercises)
   return (
-    <div className="bg-gray-50 border-b border-gray-200 px-6 py-2">
+    <div className="bg-gray-950 border-b border-gray-800 px-6 py-2">
       <div className="max-w-2xl mx-auto flex gap-6 text-center">
         <div className="flex-1">
-          <p className="text-lg font-bold text-gray-900 tabular-nums">{elapsed}</p>
-          <p className="text-xs text-gray-400">tiempo</p>
+          <p className="text-lg font-bold text-gray-100 tabular-nums">{elapsed}</p>
+          <p className="text-xs text-gray-500">tiempo</p>
         </div>
         <div className="flex-1">
-          <p className="text-lg font-bold text-gray-900">{completedSets}</p>
-          <p className="text-xs text-gray-400">series</p>
+          <p className="text-lg font-bold text-gray-100">{completedSets}</p>
+          <p className="text-xs text-gray-500">series</p>
         </div>
         <div className="flex-1">
-          <p className="text-lg font-bold text-gray-900">
+          <p className="text-lg font-bold text-gray-100">
             {volume > 0 ? `${volume.toLocaleString('es-AR')} kg` : '—'}
           </p>
-          <p className="text-xs text-gray-400">volumen</p>
+          <p className="text-xs text-gray-500">volumen</p>
         </div>
       </div>
     </div>
@@ -349,11 +349,11 @@ export default function Active() {
   if (!isActive) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-gray-950 pb-28">
       {/* Sticky header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-3 sticky top-0 z-10">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <p className="text-base font-bold text-gray-900">Entrenamiento activo</p>
+          <p className="text-base font-bold text-gray-100">Entrenamiento activo</p>
           <button
             onClick={handleCancel}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors"
@@ -385,8 +385,8 @@ export default function Active() {
         )}
 
         {exercises.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
-            <Dumbbell size={40} className="mx-auto mb-3 text-gray-200" />
+          <div className="text-center py-16 text-gray-500">
+            <Dumbbell size={40} className="mx-auto mb-3 text-gray-500" />
             <p className="font-medium text-gray-500">Sin ejercicios todavía</p>
             <p className="text-sm mt-1">Tocá "Agregar ejercicio" para comenzar</p>
           </div>
@@ -406,8 +406,8 @@ export default function Active() {
         ))}
 
         {/* Notes */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <label className="text-sm font-medium text-gray-700 block mb-2">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <label className="text-sm font-medium text-gray-300 block mb-2">
             Notas del entrenamiento
           </label>
           <textarea
@@ -415,17 +415,17 @@ export default function Active() {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="¿Cómo te sentiste? ¿Algo a mejorar?"
             rows={3}
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-900 resize-none"
+            className="w-full text-sm border border-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
           />
         </div>
       </main>
 
       {/* Fixed bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 px-6 py-4 z-10">
         <div className="max-w-2xl mx-auto flex gap-3">
           <button
             onClick={() => setShowPicker(true)}
-            className="flex items-center gap-2 border border-gray-300 text-gray-700 rounded-xl px-4 py-3 text-sm font-medium hover:border-gray-400 transition-colors shrink-0"
+            className="flex items-center gap-2 border border-gray-700 text-gray-300 rounded-xl px-4 py-3 text-sm font-medium hover:border-gray-600 transition-colors shrink-0"
           >
             <Plus size={16} />
             Agregar ejercicio
@@ -433,7 +433,7 @@ export default function Active() {
           <button
             onClick={handleFinish}
             disabled={finishing}
-            className="flex-1 bg-gray-900 text-white rounded-xl py-3 text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60"
+            className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
           >
             {finishing ? 'Guardando...' : 'Finalizar entrenamiento'}
           </button>

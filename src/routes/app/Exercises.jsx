@@ -11,9 +11,9 @@ const EQUIPMENT_OPTIONS = [
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-gray-100 rounded w-1/2" />
+    <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 animate-pulse">
+      <div className="h-4 bg-gray-800 rounded w-3/4 mb-2" />
+      <div className="h-3 bg-gray-800 rounded w-1/2" />
     </div>
   )
 }
@@ -24,8 +24,8 @@ function PillButton({ label, active, onClick }) {
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
         active
-          ? 'bg-gray-900 text-white'
-          : 'bg-white text-gray-600 border border-gray-300 hover:border-gray-400'
+          ? 'bg-indigo-600 text-white'
+          : 'bg-gray-900 text-gray-400 border border-gray-700 hover:border-gray-600'
       }`}
     >
       {label}
@@ -48,25 +48,25 @@ export default function Exercises() {
   const { muscleGroups } = useMuscleGroups()
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-950">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link to="/app/dashboard" className="text-xl font-bold text-gray-900">FORGE</Link>
+          <Link to="/app/dashboard" className="text-xl font-bold text-gray-100">FORGE</Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Ejercicios</h1>
+        <h1 className="text-2xl font-bold text-gray-100 mb-6">Ejercicios</h1>
 
         {/* Search */}
         <div className="relative mb-4">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             placeholder="Buscar ejercicio..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
 
@@ -119,7 +119,7 @@ export default function Exercises() {
           </div>
         ) : exercises.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
-            <Dumbbell size={40} className="mx-auto mb-3 text-gray-300" />
+            <Dumbbell size={40} className="mx-auto mb-3 text-gray-400" />
             <p className="font-medium">No se encontraron ejercicios</p>
             <p className="text-sm mt-1">Probá con otros filtros</p>
           </div>
@@ -129,17 +129,17 @@ export default function Exercises() {
               <Link
                 key={ex.id}
                 to={`/app/exercises/${ex.id}`}
-                className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-400 transition-colors"
+                className="bg-gray-900 rounded-lg border border-gray-800 p-4 hover:border-gray-600 transition-colors"
               >
-                <p className="font-medium text-gray-900">{ex.name}</p>
+                <p className="font-medium text-gray-100">{ex.name}</p>
                 <div className="flex gap-2 mt-1.5 flex-wrap">
                   {ex.muscle_groups && (
-                    <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
+                    <span className="text-xs text-gray-500 bg-gray-800 rounded-full px-2 py-0.5">
                       {ex.muscle_groups.name}
                     </span>
                   )}
                   {ex.equipment && (
-                    <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
+                    <span className="text-xs text-gray-500 bg-gray-800 rounded-full px-2 py-0.5">
                       {ex.equipment}
                     </span>
                   )}

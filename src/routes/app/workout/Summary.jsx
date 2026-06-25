@@ -95,24 +95,24 @@ export default function Summary() {
   const totalVolume = calcVolume(allSets)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-950">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
           <button
             onClick={() => navigate('/app/dashboard', { replace: true })}
-            className="text-gray-500 hover:text-gray-900 transition-colors"
+            className="text-gray-500 hover:text-gray-100 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">Resumen del entrenamiento</h1>
+          <h1 className="text-lg font-bold text-gray-100">Resumen del entrenamiento</h1>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
         {loading && (
           <div className="animate-pulse space-y-4">
-            <div className="h-24 bg-gray-200 rounded-xl" />
-            <div className="h-40 bg-gray-200 rounded-xl" />
+            <div className="h-24 bg-gray-800 rounded-xl" />
+            <div className="h-40 bg-gray-800 rounded-xl" />
           </div>
         )}
 
@@ -126,47 +126,47 @@ export default function Summary() {
           <>
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <Clock size={16} />
                   <span className="text-xs font-medium uppercase tracking-wide">Duración</span>
                 </div>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-xl font-bold text-gray-100">
                   {session.finished_at
                     ? formatDuration(session.started_at, session.finished_at)
                     : '—'}
                 </p>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <TrendingUp size={16} />
                   <span className="text-xs font-medium uppercase tracking-wide">Volumen</span>
                 </div>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-xl font-bold text-gray-100">
                   {totalVolume > 0 ? `${totalVolume.toLocaleString('es-AR')} kg` : '—'}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">sin calentamiento</p>
+                <p className="text-xs text-gray-500 mt-0.5">sin calentamiento</p>
               </div>
             </div>
 
             {/* Exercises */}
             {groupedSets.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <Dumbbell size={36} className="mx-auto mb-2 text-gray-200" />
+              <div className="text-center py-12 text-gray-500">
+                <Dumbbell size={36} className="mx-auto mb-2 text-gray-500" />
                 <p className="font-medium text-gray-500">No se registraron series</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <h2 className="font-semibold text-gray-900">Ejercicios</h2>
+                <h2 className="font-semibold text-gray-100">Ejercicios</h2>
                 {groupedSets.map((group) => {
                   const best = bestSet(group.sets)
                   const workingSets = group.sets.filter((s) => s.set_type !== 'warmup')
                   return (
-                    <div key={group.name} className="bg-white border border-gray-200 rounded-xl p-4">
+                    <div key={group.name} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-medium text-gray-900">{group.name}</h3>
-                        <span className="text-xs text-gray-400">
+                        <h3 className="font-medium text-gray-100">{group.name}</h3>
+                        <span className="text-xs text-gray-500">
                           {group.sets.length} {group.sets.length === 1 ? 'serie' : 'series'}
                         </span>
                       </div>
@@ -177,8 +177,8 @@ export default function Summary() {
                           const typeColor = SET_TYPE_COLOR[s.set_type] ?? ''
                           return (
                             <div key={s.id} className="flex items-center gap-3 text-sm">
-                              <span className="w-5 text-center text-gray-400 text-xs shrink-0">{i + 1}</span>
-                              <span className="text-gray-700 font-medium">
+                              <span className="w-5 text-center text-gray-500 text-xs shrink-0">{i + 1}</span>
+                              <span className="text-gray-300 font-medium">
                                 {s.weight_kg ?? 0} kg × {s.reps ?? 0} reps
                               </span>
                               {typeLabel && (
@@ -192,8 +192,8 @@ export default function Summary() {
                         })}
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-400">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                        <p className="text-xs text-gray-500">
                           Volumen: {formatVolume(group.sets)}
                         </p>
                         {best && (
@@ -211,15 +211,15 @@ export default function Summary() {
 
             {/* Notes */}
             {session.notes && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Notas</p>
-                <p className="text-sm text-gray-700">{session.notes}</p>
+                <p className="text-sm text-gray-300">{session.notes}</p>
               </div>
             )}
 
             <button
               onClick={() => navigate('/app/dashboard', { replace: true })}
-              className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-semibold hover:bg-gray-800 transition-colors"
+              className="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               Volver al inicio
             </button>

@@ -2,6 +2,7 @@ import { createBrowserRouter, redirect } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import Login from './routes/auth/Login'
 import Register from './routes/auth/Register'
+import AppLayout from './routes/app/AppLayout'
 import Dashboard from './routes/app/Dashboard'
 import Exercises from './routes/app/Exercises'
 import ExerciseDetail from './routes/app/ExerciseDetail'
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
   {
     path: '/app',
     loader: requireAuth,
+    element: <AppLayout />,
     children: [
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'exercises', element: <Exercises /> },

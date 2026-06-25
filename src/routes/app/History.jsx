@@ -79,16 +79,16 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-950">
+      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
           <button
             onClick={() => navigate('/app/dashboard')}
-            className="text-gray-500 hover:text-gray-900 transition-colors"
+            className="text-gray-500 hover:text-gray-100 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">Historial</h1>
+          <h1 className="text-lg font-bold text-gray-100">Historial</h1>
         </div>
       </header>
 
@@ -96,14 +96,14 @@ export default function History() {
         {loading && (
           <div className="animate-pulse space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded-xl" />
+              <div key={i} className="h-20 bg-gray-800 rounded-xl" />
             ))}
           </div>
         )}
 
         {!loading && sessions.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <Dumbbell size={40} className="mx-auto mb-3 text-gray-200" />
+          <div className="text-center py-20 text-gray-500">
+            <Dumbbell size={40} className="mx-auto mb-3 text-gray-500" />
             <p className="font-medium text-gray-500">No hay entrenamientos registrados</p>
             <p className="text-sm mt-1">Completá tu primer sesión para verla aquí</p>
           </div>
@@ -115,9 +115,9 @@ export default function History() {
             <button
               key={sess.id}
               onClick={() => navigate(`/app/history/${sess.id}`)}
-              className="w-full bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-gray-400 transition-colors"
+              className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-left hover:border-gray-600 transition-colors"
             >
-              <p className="font-semibold text-gray-900 text-sm">{formatTime(sess.started_at)}</p>
+              <p className="font-semibold text-gray-100 text-sm">{formatTime(sess.started_at)}</p>
               <div className="flex gap-4 mt-2 text-xs text-gray-500">
                 <span>{formatDuration(sess.started_at, sess.finished_at)}</span>
                 {stats && (
@@ -136,16 +136,16 @@ export default function History() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-100 disabled:opacity-40 transition-colors"
             >
               <ChevronLeft size={16} />
               Anterior
             </button>
-            <span className="text-sm text-gray-400">Página {page + 1}</span>
+            <span className="text-sm text-gray-500">Página {page + 1}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasMore}
-              className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-100 disabled:opacity-40 transition-colors"
             >
               Siguiente
               <ChevronRight size={16} />
