@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Dumbbell, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Clock, TrendingUp, Dumbbell, Trophy } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 
 function formatDuration(startedAt, finishedAt) {
@@ -14,9 +14,37 @@ function formatDuration(startedAt, finishedAt) {
   return `${s}s`
 }
 
+// Excludes warmup sets from volume
+function calcVolume(sets) {
+  return sets
+    .filter((s) => s.set_type !== 'warmup')
+    .reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+}
+
 function formatVolume(sets) {
-  const total = sets.reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
-  return `${total.toLocaleString('es-AR')} kg`
+  const v = calcVolume(sets)
+  return `${v.toLocaleString('es-AR')} kg`
+}
+
+function bestSet(sets) {
+  const working = sets.filter((s) => s.set_type !== 'warmup' && (s.weight_kg ?? 0) > 0)
+  if (!working.length) return null
+  return working.reduce((best, s) =>
+    (s.weight_kg ?? 0) > (best.weight_kg ?? 0) ? s : best
+  )
+}
+
+const SET_TYPE_LABEL = {
+  normal: null,
+  warmup: 'Calent.',
+  dropset: 'Dropset',
+  failure: 'Fallo',
+}
+
+const SET_TYPE_COLOR = {
+  warmup:  'text-amber-600',
+  dropset: 'text-purple-600',
+  failure: 'text-red-600',
 }
 
 export default function Summary() {
@@ -48,7 +76,6 @@ export default function Summary() {
 
       if (setsErr) { setError(setsErr.message); setLoading(false); return }
 
-      // Group sets by exercise
       const map = new Map()
       for (const s of sets ?? []) {
         const name = s.exercises?.name ?? 'Ejercicio'
@@ -65,6 +92,7 @@ export default function Summary() {
   }, [sessionId])
 
   const allSets = groupedSets.flatMap((g) => g.sets)
+  const totalVolume = calcVolume(allSets)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,7 +124,7 @@ export default function Summary() {
 
         {!loading && session && (
           <>
-            {/* Stats */}
+            {/* Stats grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
@@ -113,9 +141,12 @@ export default function Summary() {
               <div className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <TrendingUp size={16} />
-                  <span className="text-xs font-medium uppercase tracking-wide">Volumen total</span>
+                  <span className="text-xs font-medium uppercase tracking-wide">Volumen</span>
                 </div>
-                <p className="text-xl font-bold text-gray-900">{formatVolume(allSets)}</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {totalVolume > 0 ? `${totalVolume.toLocaleString('es-AR')} kg` : '—'}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">sin calentamiento</p>
               </div>
             </div>
 
@@ -128,30 +159,53 @@ export default function Summary() {
             ) : (
               <div className="space-y-4">
                 <h2 className="font-semibold text-gray-900">Ejercicios</h2>
-                {groupedSets.map((group) => (
-                  <div key={group.name} className="bg-white border border-gray-200 rounded-xl p-4">
-                    <h3 className="font-medium text-gray-900 mb-3">{group.name}</h3>
-                    <div className="space-y-1">
-                      {group.sets.map((s, i) => (
-                        <div key={s.id} className="flex items-center gap-3 text-sm">
-                          <span className="w-5 text-center text-gray-400 text-xs">{i + 1}</span>
-                          <span className="text-gray-700 font-medium">
-                            {s.weight_kg ?? 0} kg × {s.reps ?? 0} reps
-                          </span>
-                          {s.set_type !== 'normal' && (
-                            <span className="text-xs text-gray-400 capitalize">{s.set_type}</span>
-                          )}
-                          {s.completed_at && (
-                            <span className="ml-auto text-green-500 text-xs">✓</span>
-                          )}
-                        </div>
-                      ))}
+                {groupedSets.map((group) => {
+                  const best = bestSet(group.sets)
+                  const workingSets = group.sets.filter((s) => s.set_type !== 'warmup')
+                  return (
+                    <div key={group.name} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-medium text-gray-900">{group.name}</h3>
+                        <span className="text-xs text-gray-400">
+                          {group.sets.length} {group.sets.length === 1 ? 'serie' : 'series'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 mb-3">
+                        {group.sets.map((s, i) => {
+                          const typeLabel = SET_TYPE_LABEL[s.set_type]
+                          const typeColor = SET_TYPE_COLOR[s.set_type] ?? ''
+                          return (
+                            <div key={s.id} className="flex items-center gap-3 text-sm">
+                              <span className="w-5 text-center text-gray-400 text-xs shrink-0">{i + 1}</span>
+                              <span className="text-gray-700 font-medium">
+                                {s.weight_kg ?? 0} kg × {s.reps ?? 0} reps
+                              </span>
+                              {typeLabel && (
+                                <span className={`text-xs ${typeColor}`}>{typeLabel}</span>
+                              )}
+                              {s.completed_at && (
+                                <span className="ml-auto text-green-500 text-xs">✓</span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                        <p className="text-xs text-gray-400">
+                          Volumen: {formatVolume(group.sets)}
+                        </p>
+                        {best && (
+                          <p className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                            <Trophy size={11} />
+                            Mejor: {best.weight_kg} kg × {best.reps} reps
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
-                      Volumen: {formatVolume(group.sets)}
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 

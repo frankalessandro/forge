@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Check, X, ChevronDown, Dumbbell } from 'lucide-react'
+import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer } from 'lucide-react'
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
+import { useRestTimer } from '../../../hooks/useRestTimer'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 
-// ── Elapsed timer ──────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 function useElapsed(startedAt) {
   const [elapsed, setElapsed] = useState(0)
-
   useEffect(() => {
     if (!startedAt) return
     const tick = () =>
@@ -17,7 +17,6 @@ function useElapsed(startedAt) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [startedAt])
-
   const h = Math.floor(elapsed / 3600)
   const m = Math.floor((elapsed % 3600) / 60)
   const s = elapsed % 60
@@ -26,7 +25,73 @@ function useElapsed(startedAt) {
     : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// ── Last performance badge ──────────────────────────────────────────────────
+function calcStats(exercises) {
+  let completedSets = 0
+  let volume = 0
+  for (const ex of exercises) {
+    for (const s of ex.sets) {
+      if (s.completed) {
+        completedSets++
+        if (s.set_type !== 'warmup') {
+          volume += (s.reps ?? 0) * (s.weight_kg ?? 0)
+        }
+      }
+    }
+  }
+  return { completedSets, volume }
+}
+
+const SET_TYPE_STYLES = {
+  normal:  { row: '', badge: '' },
+  warmup:  { row: 'bg-amber-50',  badge: 'bg-amber-100 text-amber-700' },
+  dropset: { row: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700' },
+  failure: { row: 'bg-red-50',    badge: 'bg-red-100 text-red-700' },
+}
+
+const SET_TYPE_LABELS = {
+  normal: 'N', warmup: 'C', dropset: 'D', failure: 'F',
+}
+
+// ── Rest timer bar ─────────────────────────────────────────────────────────
+function RestTimerBar({ remaining, duration, onSkip, onAdd30 }) {
+  const pct = duration > 0 ? Math.max(0, (remaining / duration) * 100) : 0
+  const m = Math.floor(remaining / 60)
+  const s = remaining % 60
+  const label = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+  return (
+    <div className="bg-gray-900 text-white px-6 py-2">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-3 mb-1.5">
+          <Timer size={14} className="text-gray-400 shrink-0" />
+          <span className="text-xs text-gray-400 flex-1">Descanso</span>
+          <span className="font-mono font-bold tabular-nums text-sm">{label}</span>
+          <button
+            onClick={onAdd30}
+            className="text-xs text-gray-400 hover:text-white transition-colors px-1"
+          >
+            +30s
+          </button>
+          <button
+            onClick={onSkip}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+          >
+            <SkipForward size={13} />
+            Saltar
+          </button>
+        </div>
+        <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-400 rounded-full transition-all duration-1000"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Last performance ───────────────────────────────────────────────────────
 function LastPerf({ sets }) {
   if (!sets?.length) return null
   return (
@@ -43,9 +108,11 @@ function LastPerf({ sets }) {
 
 // ── Set row ────────────────────────────────────────────────────────────────
 function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
+  const styles = SET_TYPE_STYLES[set.set_type] ?? SET_TYPE_STYLES.normal
+
   return (
-    <div className={`flex items-center gap-2 py-1.5 ${set.completed ? 'opacity-60' : ''}`}>
-      <span className="w-6 text-center text-xs font-medium text-gray-400 shrink-0">
+    <div className={`flex items-center gap-2 py-1.5 rounded-lg px-1 ${styles.row} ${set.completed ? 'opacity-60' : ''}`}>
+      <span className="w-5 text-center text-xs font-medium text-gray-400 shrink-0">
         {setIndex + 1}
       </span>
 
@@ -59,7 +126,7 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
             weight_kg: e.target.value === '' ? null : Number(e.target.value),
           })
         }
-        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900"
+        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
       />
 
       <input
@@ -72,23 +139,24 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
             reps: e.target.value === '' ? null : Number(e.target.value),
           })
         }
-        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900"
+        className="w-16 text-center text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
       />
 
+      {/* Compact set-type toggle */}
       <div className="relative shrink-0">
         <select
           value={set.set_type}
           onChange={(e) => onUpdate(exId, setIndex, { set_type: e.target.value })}
-          className="appearance-none text-xs border border-gray-300 rounded-lg pl-2 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white"
+          className={`appearance-none text-xs font-semibold rounded-lg pl-2 pr-5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-900 border-0 cursor-pointer ${styles.badge || 'bg-gray-100 text-gray-600'}`}
         >
           <option value="normal">Normal</option>
-          <option value="warmup">Calentamiento</option>
+          <option value="warmup">Calent.</option>
           <option value="dropset">Dropset</option>
           <option value="failure">Fallo</option>
         </select>
         <ChevronDown
-          size={12}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          size={11}
+          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none"
         />
       </div>
 
@@ -141,8 +209,8 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
 
       {exercise.sets.length > 0 && (
         <div className="mb-2">
-          <div className="flex items-center gap-2 py-1 text-xs text-gray-400 font-medium">
-            <span className="w-6 text-center">#</span>
+          <div className="flex items-center gap-2 py-1 px-1 text-xs text-gray-400 font-medium">
+            <span className="w-5 text-center">#</span>
             <span className="w-16 text-center">kg</span>
             <span className="w-16 text-center">reps</span>
             <span>tipo</span>
@@ -172,6 +240,31 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
   )
 }
 
+// ── Live stats bar ─────────────────────────────────────────────────────────
+function StatsBar({ exercises, elapsed }) {
+  const { completedSets, volume } = calcStats(exercises)
+  return (
+    <div className="bg-gray-50 border-b border-gray-200 px-6 py-2">
+      <div className="max-w-2xl mx-auto flex gap-6 text-center">
+        <div className="flex-1">
+          <p className="text-lg font-bold text-gray-900 tabular-nums">{elapsed}</p>
+          <p className="text-xs text-gray-400">tiempo</p>
+        </div>
+        <div className="flex-1">
+          <p className="text-lg font-bold text-gray-900">{completedSets}</p>
+          <p className="text-xs text-gray-400">series</p>
+        </div>
+        <div className="flex-1">
+          <p className="text-lg font-bold text-gray-900">
+            {volume > 0 ? `${volume.toLocaleString('es-AR')} kg` : '—'}
+          </p>
+          <p className="text-xs text-gray-400">volumen</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Active workout page ────────────────────────────────────────────────────
 export default function Active() {
   const navigate = useNavigate()
@@ -180,6 +273,7 @@ export default function Active() {
     addSet, updateSet, completeSet, deleteSet,
     deleteExercise, finishSession, cancelSession, getLastPerformance,
   } = useWorkout()
+  const restTimer = useRestTimer()
 
   const [showPicker, setShowPicker] = useState(false)
   const [lastPerfs, setLastPerfs] = useState({})
@@ -188,12 +282,10 @@ export default function Active() {
   const [error, setError] = useState(null)
   const elapsed = useElapsed(session?.startedAt)
 
-  // Redirect if no active session
   useEffect(() => {
     if (!isActive) navigate('/app/workout/start', { replace: true })
   }, [isActive, navigate])
 
-  // Warn on browser close/refresh
   useEffect(() => {
     const handler = (e) => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', handler)
@@ -202,7 +294,7 @@ export default function Active() {
 
   const loadLastPerf = useCallback(async (exerciseId) => {
     if (lastPerfs[exerciseId] !== undefined) return
-    setLastPerfs((p) => ({ ...p, [exerciseId]: null })) // mark as loading
+    setLastPerfs((p) => ({ ...p, [exerciseId]: null }))
     const data = await getLastPerformance(exerciseId)
     setLastPerfs((p) => ({ ...p, [exerciseId]: data }))
   }, [lastPerfs, getLastPerformance])
@@ -211,13 +303,25 @@ export default function Active() {
     exercises.forEach((ex) => {
       if (lastPerfs[ex.exerciseId] === undefined) loadLastPerf(ex.exerciseId)
     })
-  }) // run every render but loadLastPerf is gated by undefined check
+  })
 
   const handlePickExercise = (exercise) => {
     useWorkoutStore.getState().addExercise(exercise)
     setShowPicker(false)
     loadLastPerf(exercise.id)
   }
+
+  const handleCompleteSet = useCallback(async (exerciseId, setIndex) => {
+    try {
+      await completeSet(exerciseId, setIndex)
+      // Only start rest timer when marking complete (not uncomplete)
+      const set = useWorkoutStore.getState().exercises
+        .find((ex) => ex.exerciseId === exerciseId)?.sets[setIndex]
+      if (set?.completed) restTimer.start()
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [completeSet, restTimer])
 
   const wrap = (fn) => async (...args) => {
     try { await fn(...args) } catch (err) { setError(err.message) }
@@ -226,6 +330,7 @@ export default function Active() {
   const handleFinish = async () => {
     try {
       setFinishing(true)
+      restTimer.skip()
       const sessionId = await finishSession(notes || null)
       navigate(`/app/workout/summary/${sessionId}`, { replace: true })
     } catch (err) {
@@ -236,6 +341,7 @@ export default function Active() {
 
   const handleCancel = async () => {
     if (!window.confirm('¿Cancelar el entrenamiento? Se perderán todos los datos.')) return
+    restTimer.skip()
     await cancelSession()
     navigate('/app/dashboard', { replace: true })
   }
@@ -244,15 +350,10 @@ export default function Active() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
-      {/* Sticky header with timer */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
+      {/* Sticky header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">
-              Entrenamiento activo
-            </p>
-            <p className="text-2xl font-mono font-bold text-gray-900 tabular-nums">{elapsed}</p>
-          </div>
+          <p className="text-base font-bold text-gray-900">Entrenamiento activo</p>
           <button
             onClick={handleCancel}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors"
@@ -262,6 +363,19 @@ export default function Active() {
           </button>
         </div>
       </header>
+
+      {/* Rest timer bar — shown when timer is running */}
+      {restTimer.isRunning && (
+        <RestTimerBar
+          remaining={restTimer.remaining}
+          duration={restTimer.duration}
+          onSkip={restTimer.skip}
+          onAdd30={() => restTimer.addTime(30)}
+        />
+      )}
+
+      {/* Live stats bar */}
+      <StatsBar exercises={exercises} elapsed={elapsed} />
 
       <main className="max-w-2xl mx-auto px-6 py-6 space-y-4">
         {error && (
@@ -285,7 +399,7 @@ export default function Active() {
             lastPerf={lastPerfs[ex.exerciseId]}
             onAddSet={wrap(addSet)}
             onUpdateSet={wrap(updateSet)}
-            onCompleteSet={wrap(completeSet)}
+            onCompleteSet={handleCompleteSet}
             onDeleteSet={wrap(deleteSet)}
             onDeleteExercise={wrap(deleteExercise)}
           />
