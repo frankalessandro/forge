@@ -6,6 +6,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check, MailCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
+import { useRoutines } from '../../hooks/useRoutines'
+import { levelFromActivity } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { AuthShell } from './Login'
 
@@ -33,6 +35,7 @@ const ONBOARDING_STEPS = 5
 export default function Register() {
   const navigate = useNavigate()
   const { updateProfile, addBodyStat } = useProfile()
+  const { generateForGoal } = useRoutines()
 
   // step 0 = credenciales · 1..5 = entrevista · 'confirm' = requiere verificar email
   const [step, setStep] = useState(0)
@@ -84,6 +87,20 @@ export default function Register() {
 
     if (Object.keys(payload).length) await updateProfile(payload)
     if (profile.weight_kg) await addBodyStat(Number(profile.weight_kg))
+
+    // Genera una rutina inicial a partir del objetivo elegido. No bloquea el
+    // onboarding: si falla, el usuario igual entra y puede generarla luego.
+    if (profile.goal) {
+      try {
+        await generateForGoal({
+          goal: profile.goal,
+          level: levelFromActivity(profile.activity_level),
+          daysPerWeek: profile.training_days_per_week !== '' ? Number(profile.training_days_per_week) : 3,
+        })
+      } catch {
+        // silencioso: la generación es un extra, no un requisito del registro
+      }
+    }
 
     navigate('/app/dashboard', { replace: true })
   }

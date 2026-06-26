@@ -1,7 +1,21 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Dumbbell } from 'lucide-react'
+import { Dumbbell, Trophy, TrendingUp } from 'lucide-react'
+import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { useExercise } from '../../hooks/useExercises'
+import { useExerciseHistory } from '../../hooks/useExerciseHistory'
 import PageHeader from '../../components/ui/PageHeader'
+
+const METRICS = [
+  { key: 'maxWeight', label: 'Peso máx', unit: 'kg' },
+  { key: 'est1RM', label: '1RM est.', unit: 'kg' },
+  { key: 'volume', label: 'Volumen', unit: 'kg' },
+]
+
+function formatDateShort(isoStr) {
+  const d = new Date(isoStr)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 function SkeletonDetail() {
   return (
@@ -71,11 +85,127 @@ export default function ExerciseDetail() {
                 </div>
               </div>
             )}
+
+            <ProgressSection exerciseId={id} />
           </div>
         )}
 
         {!loading && !error && !exercise && <p className="text-zinc-500">Ejercicio no encontrado.</p>}
       </main>
+    </div>
+  )
+}
+
+function PRCard({ label, value, unit, highlight }) {
+  return (
+    <div className={`border rounded-2xl p-4 ${highlight ? 'bg-accent/10 border-accent/25' : 'card'}`}>
+      <p className="eyebrow text-zinc-500">{label}</p>
+      <p className={`stat-num text-2xl mt-1 ${highlight ? 'text-accent' : 'text-zinc-100'}`}>
+        {value.toLocaleString('es-AR')}
+        {unit && <span className="text-sm font-semibold text-zinc-500 ml-1">{unit}</span>}
+      </p>
+    </div>
+  )
+}
+
+function ProgressSection({ exerciseId }) {
+  const { history, prs, loading, error } = useExerciseHistory(exerciseId)
+  const [metric, setMetric] = useState('maxWeight')
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <h2 className="section-title">Progreso</h2>
+        <div className="h-48 card animate-pulse" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="section-title mb-2">Progreso</h2>
+        <p className="text-sm text-red-400">Error: {error}</p>
+      </div>
+    )
+  }
+
+  if (!prs || history.length === 0) {
+    return (
+      <div>
+        <h2 className="section-title mb-2 flex items-center gap-2">
+          <TrendingUp size={16} className="text-zinc-500" />
+          Progreso
+        </h2>
+        <div className="card border-dashed px-6 py-8 text-center">
+          <p className="text-sm text-zinc-500">Todavía no registraste este ejercicio.</p>
+          <p className="text-xs text-zinc-600 mt-1">Cuando lo entrenes vas a ver acá tu evolución y tus récords.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const active = METRICS.find((m) => m.key === metric)
+  const chartData = history.map((h) => ({ date: formatDateShort(h.date), value: h[metric] }))
+
+  return (
+    <div className="space-y-5">
+      {/* Récords personales */}
+      <div>
+        <h2 className="section-title mb-2 flex items-center gap-2">
+          <Trophy size={16} className="text-accent" />
+          Récords personales
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <PRCard label="Peso máximo" value={prs.maxWeight} unit="kg" highlight />
+          <PRCard label="1RM estimado" value={prs.max1RM} unit="kg" />
+          <PRCard label="Mejor volumen" value={prs.maxVolume} unit="kg" />
+          <PRCard label="Sesiones" value={prs.sessions} />
+        </div>
+      </div>
+
+      {/* Gráfico de progresión */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title flex items-center gap-2">
+            <TrendingUp size={16} className="text-zinc-500" />
+            Progresión
+          </h2>
+          <div className="flex gap-1 bg-ink-900 rounded-xl p-1">
+            {METRICS.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMetric(m.key)}
+                className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
+                  metric === m.key ? 'bg-accent text-ink-950 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {history.length > 1 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#71717a' }} stroke="#2a2a31" />
+              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#71717a' }} width={40} stroke="#2a2a31" />
+              <Tooltip
+                contentStyle={{ background: '#17171b', border: '1px solid #2a2a31', borderRadius: 12, color: '#fafafa' }}
+                labelStyle={{ color: '#a1a1aa' }}
+                formatter={(value) => [`${value.toLocaleString('es-AR')} ${active.unit}`, active.label]}
+              />
+              <Line type="monotone" dataKey="value" stroke="#a3e635" dot={{ r: 2, fill: '#a3e635' }} strokeWidth={2.5} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-sm text-zinc-500 card px-5 py-6 text-center">
+            Registrá este ejercicio al menos dos veces para ver la curva de progresión.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
