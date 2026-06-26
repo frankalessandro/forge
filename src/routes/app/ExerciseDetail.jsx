@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Dumbbell, Trophy, TrendingUp } from 'lucide-react'
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
-import { useExercise } from '../../hooks/useExercises'
+import { useExercise, useExerciseVariations } from '../../hooks/useExercises'
 import { useExerciseHistory } from '../../hooks/useExerciseHistory'
+import ExerciseMedia from '../../components/features/ExerciseMedia'
 import PageHeader from '../../components/ui/PageHeader'
 
 const METRICS = [
@@ -61,6 +62,8 @@ export default function ExerciseDetail() {
               </div>
             </div>
 
+            <ExerciseMedia imageUrl={exercise.image_url} videoUrl={exercise.video_url} alt={exercise.name} />
+
             {exercise.description && (
               <div>
                 <h2 className="section-title mb-2">Descripción</h2>
@@ -86,12 +89,37 @@ export default function ExerciseDetail() {
               </div>
             )}
 
+            <VariationsSection exerciseId={id} />
+
             <ProgressSection exerciseId={id} />
           </div>
         )}
 
         {!loading && !error && !exercise && <p className="text-zinc-500">Ejercicio no encontrado.</p>}
       </main>
+    </div>
+  )
+}
+
+function VariationsSection({ exerciseId }) {
+  const { variations, loading } = useExerciseVariations(exerciseId)
+
+  if (loading || variations.length === 0) return null
+
+  return (
+    <div>
+      <h2 className="section-title mb-2">Variaciones</h2>
+      <div className="space-y-3">
+        {variations.map((v) => (
+          <div key={v.id} className="card p-4 space-y-3">
+            <div>
+              <p className="display text-sm text-zinc-100">{v.name}</p>
+              {v.description && <p className="text-sm text-zinc-400 mt-1 leading-relaxed">{v.description}</p>}
+            </div>
+            <ExerciseMedia imageUrl={v.image_url} videoUrl={v.video_url} alt={v.name} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -139,7 +167,7 @@ function ProgressSection({ exerciseId }) {
         </h2>
         <div className="card border-dashed px-6 py-8 text-center">
           <p className="text-sm text-zinc-500">Todavía no registraste este ejercicio.</p>
-          <p className="text-xs text-zinc-600 mt-1">Cuando lo entrenes vas a ver acá tu evolución y tus récords.</p>
+          <p className="text-xs text-zinc-600 mt-1">Cuando lo entrenes verás aquí tu evolución y tus récords.</p>
         </div>
       </div>
     )
@@ -202,7 +230,7 @@ function ProgressSection({ exerciseId }) {
           </ResponsiveContainer>
         ) : (
           <p className="text-sm text-zinc-500 card px-5 py-6 text-center">
-            Registrá este ejercicio al menos dos veces para ver la curva de progresión.
+            Registra este ejercicio al menos dos veces para ver la curva de progresión.
           </p>
         )}
       </div>

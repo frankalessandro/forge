@@ -13,7 +13,7 @@ import { AuthShell } from './Login'
 
 const credentialsSchema = z
   .object({
-    email: z.string().email('Ingresá un email válido'),
+    email: z.string().email('Ingresa un email válido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
     confirmPassword: z.string(),
   })
@@ -64,7 +64,7 @@ export default function Register() {
   const onCreateAccount = async ({ email, password }) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
-      setError('root', { message: 'No se pudo crear la cuenta. Probá con otro email.' })
+      setError('root', { message: 'No se pudo crear la cuenta. Prueba con otro email.' })
       return
     }
     // Si hay sesión, seguimos a la entrevista. Si no, hay que confirmar el email.
@@ -116,9 +116,9 @@ export default function Register() {
           <div className="w-12 h-12 rounded-2xl bg-accent/15 text-accent flex items-center justify-center mx-auto mb-4">
             <MailCheck size={24} />
           </div>
-          <h1 className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100">Revisá tu email</h1>
+          <h1 className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100">Revisa tu email</h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Te enviamos un enlace para confirmar tu cuenta. Después de confirmarla, iniciá sesión.
+            Te enviamos un enlace para confirmar tu cuenta. Después de confirmarla, inicia sesión.
           </p>
           <Link to="/login" className="btn-accent w-full py-3 text-sm mt-6">Ir a iniciar sesión</Link>
         </div>
@@ -131,7 +131,7 @@ export default function Register() {
       <AuthShell>
         <div className="card p-7">
           <h1 className="font-display font-bold uppercase tracking-tight text-2xl text-zinc-100">Crear cuenta</h1>
-          <p className="text-sm text-zinc-500 mt-1 mb-6">Empezá a registrar tu progreso.</p>
+          <p className="text-sm text-zinc-500 mt-1 mb-6">Empieza a registrar tu progreso.</p>
 
           <form onSubmit={handleSubmit(onCreateAccount)} className="space-y-4">
             <div>
@@ -163,8 +163,8 @@ export default function Register() {
         </div>
 
         <p className="text-sm text-zinc-500 text-center mt-5">
-          ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">Iniciá sesión</Link>
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">Inicia sesión</Link>
         </p>
       </AuthShell>
     )
@@ -179,7 +179,7 @@ export default function Register() {
         {step === 1 && (
           <Step
             eyebrow="Paso 1 de 5"
-            title="¿Cómo te llamás?"
+            title="¿Cómo te llamas?"
             subtitle="Así personalizamos tu experiencia."
           >
             <input
@@ -195,7 +195,7 @@ export default function Register() {
         )}
 
         {step === 2 && (
-          <Step eyebrow="Paso 2 de 5" title="Sobre vos" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
+          <Step eyebrow="Paso 2 de 5" title="Sobre ti" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
             <label className="block mb-4">
               <span className="field-label">Fecha de nacimiento</span>
               <input
@@ -257,7 +257,7 @@ export default function Register() {
         )}
 
         {step === 4 && (
-          <Step eyebrow="Paso 4 de 5" title="¿Qué tan activo sos?" subtitle="Tu nivel de actividad y cuántos días entrenás.">
+          <Step eyebrow="Paso 4 de 5" title="¿Qué tan activo eres?" subtitle="Tu nivel de actividad y cuántos días entrenas.">
             <div className="space-y-2.5">
               {ACTIVITY_LEVELS.map(({ value, label, desc }) => {
                 const active = profile.activity_level === value

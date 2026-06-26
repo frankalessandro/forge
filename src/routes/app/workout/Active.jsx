@@ -4,6 +4,9 @@ import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer } fro
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
+import { useAchievements } from '../../../hooks/useAchievements'
+import { useToastStore } from '../../../stores/toastStore'
+import { iconFor } from '../../../utils/achievementIcons'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 
 const PERSIST_DELAY = 600
@@ -155,6 +158,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
 const ExerciseCard = memo(function ExerciseCard({
   exercise, lastPerf, onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
 }) {
+  const [showMedia, setShowMedia] = useState(false)
   const lastSet = exercise.sets[exercise.sets.length - 1]
   const handleAddSet = () =>
     onAddSet(exercise.exerciseId, {
@@ -165,12 +169,25 @@ const ExerciseCard = memo(function ExerciseCard({
 
   return (
     <div className="card p-4">
-      <div className="flex items-start justify-between mb-1">
-        <h3 className="display text-sm text-zinc-100">{exercise.name}</h3>
+      <div className="flex items-start gap-2 mb-1">
+        {exercise.imageUrl && (
+          <button
+            onClick={() => setShowMedia((v) => !v)}
+            className="w-9 h-9 rounded-lg overflow-hidden bg-black border border-ink-700 shrink-0"
+            title="Ver demostración"
+          >
+            <img src={exercise.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+          </button>
+        )}
+        <h3 className="display text-sm text-zinc-100 flex-1 min-w-0">{exercise.name}</h3>
         <button onClick={() => onDeleteExercise(exercise.exerciseId)} className="text-zinc-600 hover:text-red-400 transition-colors p-1 -mr-1 -mt-1">
           <Trash2 size={16} />
         </button>
       </div>
+
+      {showMedia && exercise.imageUrl && (
+        <img src={exercise.imageUrl} alt={exercise.name} className="w-full max-h-56 object-contain bg-black rounded-xl border border-ink-800 mb-2.5" loading="lazy" />
+      )}
 
       <LastPerf sets={lastPerf} />
 
@@ -241,6 +258,8 @@ export default function Active() {
     deleteExercise, finishSession, cancelSession, getLastPerformance,
   } = useWorkout()
   const restTimer = useRestTimer()
+  const { checkAndUnlock } = useAchievements()
+  const addToast = useToastStore((s) => s.addToast)
 
   const [showPicker, setShowPicker] = useState(false)
   const [lastPerfs, setLastPerfs] = useState({})
@@ -339,6 +358,16 @@ export default function Active() {
       restTimer.skip()
       await flushAll() // guardar lo que quedó pendiente antes de cerrar
       const sessionId = await finishSession(notes || null)
+
+      // Logros: chequear y notificar los que se desbloquearon con este entreno.
+      checkAndUnlock()
+        .then((newly) => {
+          for (const a of newly) {
+            addToast({ title: `¡Logro desbloqueado! ${a.name}`, description: a.description, icon: iconFor(a.icon) })
+          }
+        })
+        .catch(() => {})
+
       navigate(`/app/workout/summary/${sessionId}`, { replace: true })
     } catch (err) {
       setError(err.message)
@@ -384,7 +413,7 @@ export default function Active() {
           <div className="text-center py-16 text-zinc-500">
             <Dumbbell size={40} className="mx-auto mb-3 text-zinc-700" />
             <p className="display text-sm text-zinc-400">Sin ejercicios todavía</p>
-            <p className="text-sm mt-1 text-zinc-600">Tocá "Agregar ejercicio" para comenzar</p>
+            <p className="text-sm mt-1 text-zinc-600">Toca "Agregar ejercicio" para comenzar</p>
           </div>
         )}
 

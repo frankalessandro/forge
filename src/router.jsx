@@ -19,6 +19,8 @@ const Summary = lazy(() => import('./routes/app/workout/Summary'))
 const Profile = lazy(() => import('./routes/app/Profile'))
 const History = lazy(() => import('./routes/app/History'))
 const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
+const Friends = lazy(() => import('./routes/app/Friends'))
+const PublicProfile = lazy(() => import('./routes/app/PublicProfile'))
 
 function Fallback() {
   return <div className="min-h-screen bg-ink-950" />
@@ -63,6 +65,8 @@ export const router = createBrowserRouter([
       { path: 'workout/active', element: <Active /> },
       { path: 'workout/summary/:sessionId', element: <Summary /> },
       { path: 'profile', element: <Profile /> },
+      { path: 'friends', element: <Friends /> },
+      { path: 'u/:userId', element: <PublicProfile /> },
       { path: 'history', element: <History /> },
       { path: 'history/:sessionId', element: <HistoryDetail /> },
     ],

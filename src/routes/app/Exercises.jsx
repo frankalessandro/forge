@@ -80,7 +80,7 @@ export default function Exercises() {
           <div className="text-center py-16 text-zinc-500">
             <Dumbbell size={40} className="mx-auto mb-3 text-zinc-700" />
             <p className="display text-sm text-zinc-400">No se encontraron ejercicios</p>
-            <p className="text-sm mt-1 text-zinc-600">Probá con otros filtros</p>
+            <p className="text-sm mt-1 text-zinc-600">Prueba con otros filtros</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

@@ -91,7 +91,7 @@ export default function History() {
           <div className="text-center py-20 text-zinc-500">
             <Dumbbell size={40} className="mx-auto mb-3 text-zinc-700" />
             <p className="display text-sm text-zinc-400">No hay entrenamientos registrados</p>
-            <p className="text-sm mt-1 text-zinc-600">Completá tu primera sesión para verla acá</p>
+            <p className="text-sm mt-1 text-zinc-600">Completa tu primera sesión para verla aquí</p>
           </div>
         )}
 

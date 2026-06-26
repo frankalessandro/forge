@@ -30,7 +30,7 @@ export function useWorkout() {
         routine_exercises (
           sets, reps, "order",
           exercise_id,
-          exercises ( name )
+          exercises ( name, image_url )
         )
       `)
       .eq('id', routineId)
@@ -74,7 +74,7 @@ export function useWorkout() {
 
       // 4. Poblar el store respetando el orden de la rutina
       for (const re of planned) {
-        store.addExercise({ id: re.exercise_id, name: re.exercises?.name ?? 'Ejercicio' })
+        store.addExercise({ id: re.exercise_id, name: re.exercises?.name ?? 'Ejercicio', image_url: re.exercises?.image_url ?? null })
         const exSets = inserted
           .filter((s) => s.exercise_id === re.exercise_id)
           .sort((a, b) => a.set_number - b.set_number)

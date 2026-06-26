@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Play, ClipboardList, Dumbbell, ChevronRight } from 'lucide-react'
+import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 function getMondayOfWeek(date) {
@@ -156,6 +156,7 @@ export default function Dashboard() {
             <AccessRow to="/app/routines" icon={ClipboardList} title="Rutinas" subtitle="Plantillas y las tuyas" />
             <AccessRow to="/app/exercises" icon={Dumbbell} title="Ejercicios" subtitle="Catálogo por músculo" />
             <AccessRow to="/app/history" icon={Play} title="Progreso" subtitle="Historial y evolución" />
+            <AccessRow to="/app/friends" icon={Users} title="Amigos" subtitle="Compara tu progreso" />
           </div>
         </section>
       </main>

@@ -99,7 +99,7 @@ export default function Routines() {
     try {
       const { data: profile } = await getProfile()
       if (!profile?.goal) {
-        setGenMsg({ type: 'error', text: 'Primero definí tu objetivo en tu perfil.' })
+        setGenMsg({ type: 'error', text: 'Primero define tu objetivo en tu perfil.' })
         return
       }
       const created = await generateForGoal({
@@ -155,7 +155,7 @@ export default function Routines() {
               <Sparkles size={20} />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="display text-sm text-zinc-100">Generá tu rutina</h2>
+              <h2 className="display text-sm text-zinc-100">Genera tu rutina</h2>
               {profile?.goal ? (
                 <p className="text-sm text-zinc-500 mt-0.5">
                   Según tu objetivo (<span className="text-accent">{GOAL_LABELS[profile.goal]}</span>) y{' '}
@@ -164,7 +164,7 @@ export default function Routines() {
                 </p>
               ) : (
                 <p className="text-sm text-zinc-500 mt-0.5">
-                  Definí tu objetivo en{' '}
+                  Define tu objetivo en{' '}
                   <Link to="/app/profile" className="text-accent hover:text-accent-bright">tu perfil</Link>{' '}
                   para generar una rutina a tu medida.
                 </p>
@@ -215,8 +215,8 @@ export default function Routines() {
               className="block card border-dashed px-6 py-10 text-center card-hover"
             >
               <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
-              <p className="display text-sm text-zinc-300">Todavía no tenés rutinas propias</p>
-              <p className="text-sm text-accent mt-1">Creá tu primera rutina</p>
+              <p className="display text-sm text-zinc-300">Todavía no tienes rutinas propias</p>
+              <p className="text-sm text-accent mt-1">Crea tu primera rutina</p>
             </Link>
           ) : (
             <div className="space-y-3">

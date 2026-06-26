@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Home, ClipboardList, TrendingUp, User, Plus, Play, Dumbbell, Scale, X } from 'lucide-react'
 import { useWorkout } from '../../hooks/useWorkout'
 import Sheet from '../../components/ui/Sheet'
+import Toaster from '../../components/ui/Toaster'
 
 const TABS = [
   { to: '/app/dashboard', label: 'Inicio', icon: Home },
@@ -60,6 +61,8 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <Toaster />
+
       <div className={hideNav ? '' : 'pb-24'}>
         <Outlet />
       </div>
@@ -90,18 +93,18 @@ export default function AppLayout() {
             </div>
           </nav>
 
-          <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="¿Qué querés hacer?">
+          <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="¿Qué quieres hacer?">
             <QuickAction
               icon={Play}
               title={starting ? 'Iniciando…' : 'Entrenar libre'}
-              subtitle="Sesión vacía, agregá sobre la marcha"
+              subtitle="Sesión vacía, agrega sobre la marcha"
               onClick={handleStartFree}
               accent
             />
             <QuickAction
               icon={ClipboardList}
               title="Desde una rutina"
-              subtitle="Elegí una plantilla o la tuya"
+              subtitle="Elige una plantilla o la tuya"
               onClick={() => go('/app/workout/start')}
             />
             <QuickAction
@@ -113,7 +116,7 @@ export default function AppLayout() {
             <QuickAction
               icon={Scale}
               title="Registrar peso"
-              subtitle="Actualizá tu progreso corporal"
+              subtitle="Actualiza tu progreso corporal"
               onClick={() => go('/app/profile')}
             />
             <button

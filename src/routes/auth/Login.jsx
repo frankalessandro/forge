@@ -6,7 +6,7 @@ import { Dumbbell } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 const loginSchema = z.object({
-  email: z.string().email('Ingresá un email válido'),
+  email: z.string().email('Ingresa un email válido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
 })
 
@@ -34,7 +34,7 @@ export default function Login() {
         <h1 className="font-display font-bold uppercase tracking-tight text-2xl text-zinc-100">
           Iniciar sesión
         </h1>
-        <p className="text-sm text-zinc-500 mt-1 mb-6">Seguí donde lo dejaste.</p>
+        <p className="text-sm text-zinc-500 mt-1 mb-6">Continúa donde lo dejaste.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -62,7 +62,7 @@ export default function Login() {
       </div>
 
       <p className="text-sm text-zinc-500 text-center mt-5">
-        ¿No tenés cuenta?{' '}
+        ¿No tienes cuenta?{' '}
         <Link to="/register" className="text-accent hover:text-accent-bright font-semibold">
           Registrate
         </Link>

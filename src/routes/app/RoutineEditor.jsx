@@ -146,7 +146,7 @@ export default function RoutineEditor() {
     setErrors({})
 
     if (items.length === 0) {
-      setSaveError('Agregá al menos un ejercicio a la rutina.')
+      setSaveError('Agrega al menos un ejercicio a la rutina.')
       return
     }
 
