@@ -4,7 +4,10 @@ import { getCurrentUserId } from '../stores/authStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 
 export function useWorkout() {
-  const store = useWorkoutStore()
+  // Las acciones del store son estables por referencia (Zustand las crea una
+  // sola vez). No nos suscribimos al estado con useWorkoutStore() — eso haría
+  // que cada cambio (cada tecla en un peso/reps) recree estos callbacks y rompa
+  // el memo de ExerciseCard/SetRow. Leemos siempre vía getState().
 
   const startSession = useCallback(async () => {
     const { data, error } = await supabase
@@ -15,9 +18,9 @@ export function useWorkout() {
 
     if (error) throw error
 
-    store.startSession({ id: data.id, startedAt: data.started_at, notes: '' })
+    useWorkoutStore.getState().startSession({ id: data.id, startedAt: data.started_at, notes: '' })
     return data
-  }, [store])
+  }, [])
 
   const startSessionFromRoutine = useCallback(async (routineId) => {
     const userId = getCurrentUserId()
@@ -47,6 +50,7 @@ export function useWorkout() {
       .single()
     if (sessionError) throw sessionError
 
+    const store = useWorkoutStore.getState()
     store.startSession({ id: session.id, startedAt: session.started_at, notes: '' })
 
     // 3. Pre-cargar series planificadas (reps de la rutina, peso a completar)
@@ -90,7 +94,7 @@ export function useWorkout() {
     }
 
     return session
-  }, [store])
+  }, [])
 
   const addSet = useCallback(async (exerciseId, setData) => {
     const session = useWorkoutStore.getState().session
@@ -114,9 +118,9 @@ export function useWorkout() {
 
     if (error) throw error
 
-    store.addSet(exerciseId, { ...setData, dbId: data.id, set_type: setData.set_type ?? 'normal' })
+    useWorkoutStore.getState().addSet(exerciseId, { ...setData, dbId: data.id, set_type: setData.set_type ?? 'normal' })
     return data
-  }, [store])
+  }, [])
 
   const updateSet = useCallback(async (exerciseId, setIndex, patch) => {
     const exercise = useWorkoutStore.getState().exercises.find(
@@ -131,8 +135,8 @@ export function useWorkout() {
       .eq('id', dbId)
 
     if (error) throw error
-    store.updateSet(exerciseId, setIndex, patch)
-  }, [store])
+    useWorkoutStore.getState().updateSet(exerciseId, setIndex, patch)
+  }, [])
 
   const completeSet = useCallback(async (exerciseId, setIndex) => {
     const set = useWorkoutStore
@@ -142,7 +146,7 @@ export function useWorkout() {
 
     const nowCompleted = !set.completed
     // Actualizamos el store primero: el check se ve al instante (sin esperar la red).
-    store.completeSet(exerciseId, setIndex)
+    useWorkoutStore.getState().completeSet(exerciseId, setIndex)
 
     const { error } = await supabase
       .from('workout_sets')
@@ -150,10 +154,10 @@ export function useWorkout() {
       .eq('id', set.dbId)
 
     if (error) {
-      store.completeSet(exerciseId, setIndex) // revertir si falló
+      useWorkoutStore.getState().completeSet(exerciseId, setIndex) // revertir si falló
       throw error
     }
-  }, [store])
+  }, [])
 
   // Persiste (en background) todas las series de un ejercicio según el estado
   // actual del store. Lo usa el logger con debounce para no escribir por tecla.
@@ -187,8 +191,8 @@ export function useWorkout() {
       const { error } = await supabase.from('workout_sets').delete().eq('id', dbId)
       if (error) throw error
     }
-    store.deleteSet(exerciseId, setIndex)
-  }, [store])
+    useWorkoutStore.getState().deleteSet(exerciseId, setIndex)
+  }, [])
 
   const deleteExercise = useCallback(async (exerciseId) => {
     const session = useWorkoutStore.getState().session
@@ -198,8 +202,8 @@ export function useWorkout() {
       .eq('session_id', session.id)
       .eq('exercise_id', exerciseId)
     if (error) throw error
-    store.deleteExercise(exerciseId)
-  }, [store])
+    useWorkoutStore.getState().deleteExercise(exerciseId)
+  }, [])
 
   const finishSession = useCallback(async (notes) => {
     const session = useWorkoutStore.getState().session
@@ -209,9 +213,9 @@ export function useWorkout() {
       .eq('id', session.id)
     if (error) throw error
     const sessionId = session.id
-    store.finishSession()
+    useWorkoutStore.getState().finishSession()
     return sessionId
-  }, [store])
+  }, [])
 
   const cancelSession = useCallback(async () => {
     const session = useWorkoutStore.getState().session
@@ -219,14 +223,18 @@ export function useWorkout() {
       // Cascade delete via FK will remove workout_sets too
       await supabase.from('workout_sessions').delete().eq('id', session.id)
     }
-    store.cancelSession()
-  }, [store])
+    useWorkoutStore.getState().cancelSession()
+  }, [])
 
   const getLastPerformance = useCallback(async (exerciseId) => {
     const userId = getCurrentUserId()
     const currentSessionId = useWorkoutStore.getState().session?.id
 
-    // Find the most recent completed session (not current) that has sets for this exercise
+    // Última vez que se hizo este ejercicio. Antes era un N+1 en serie (1 query
+    // de sesiones + 1 query por cada sesión hasta encontrar sets). Ahora son 2
+    // queries acotadas, independientes del número de ejercicios del entreno:
+    //   1) las sesiones finalizadas recientes (orden desc)
+    //   2) todos los sets de este ejercicio en esas sesiones, de una sola vez
     const { data: sessions } = await supabase
       .from('workout_sessions')
       .select('id')
@@ -238,17 +246,23 @@ export function useWorkout() {
 
     if (!sessions?.length) return null
 
-    for (const s of sessions) {
-      const { data: sets } = await supabase
-        .from('workout_sets')
-        .select('reps, weight_kg, set_type, set_number')
-        .eq('session_id', s.id)
-        .eq('exercise_id', exerciseId)
-        .order('set_number')
+    const ids = sessions.map((s) => s.id)
+    const { data: rows } = await supabase
+      .from('workout_sets')
+      .select('reps, weight_kg, set_type, set_number, session_id')
+      .eq('exercise_id', exerciseId)
+      .in('session_id', ids)
+      .order('set_number')
 
-      if (sets?.length) return sets
-    }
-    return null
+    if (!rows?.length) return null
+
+    // Elegimos la sesión más reciente (según el orden de `sessions`) que tenga
+    // sets de este ejercicio, y devolvemos sus sets ya ordenados por set_number.
+    const bySession = new Set(rows.map((r) => r.session_id))
+    const latestId = ids.find((id) => bySession.has(id))
+    return rows
+      .filter((r) => r.session_id === latestId)
+      .map(({ reps, weight_kg, set_type, set_number }) => ({ reps, weight_kg, set_type, set_number }))
   }, [])
 
   return {
