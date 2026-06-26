@@ -1,15 +1,15 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCurrentUserId } from '../stores/authStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 
 export function useWorkout() {
   const store = useWorkoutStore()
 
   const startSession = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
     const { data, error } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: user.id })
+      .insert({ user_id: getCurrentUserId() })
       .select('id, started_at')
       .single()
 
@@ -20,7 +20,7 @@ export function useWorkout() {
   }, [store])
 
   const startSessionFromRoutine = useCallback(async (routineId) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
 
     // 1. Traer los ejercicios de la rutina, ordenados
     const { data: routine, error: routineError } = await supabase
@@ -42,7 +42,7 @@ export function useWorkout() {
     // 2. Crear la sesión vinculada a la rutina
     const { data: session, error: sessionError } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: user.id, routine_id: routineId })
+      .insert({ user_id: userId, routine_id: routineId })
       .select('id, started_at')
       .single()
     if (sessionError) throw sessionError
@@ -223,14 +223,14 @@ export function useWorkout() {
   }, [store])
 
   const getLastPerformance = useCallback(async (exerciseId) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
     const currentSessionId = useWorkoutStore.getState().session?.id
 
     // Find the most recent completed session (not current) that has sets for this exercise
     const { data: sessions } = await supabase
       .from('workout_sessions')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .not('finished_at', 'is', null)
       .neq('id', currentSessionId ?? '')
       .order('finished_at', { ascending: false })

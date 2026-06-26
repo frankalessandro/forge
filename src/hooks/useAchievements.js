@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCurrentUserId } from '../stores/authStore'
 
 function toDateStr(date) {
   return new Date(date).toISOString().slice(0, 10)
@@ -46,23 +47,23 @@ export function useAchievements() {
   }, [])
 
   const getUnlocked = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('user_achievements')
       .select('achievement_id, unlocked_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
     if (error) throw error
     return data ?? []
   }, [])
 
   // Calcula las métricas de gamificación del usuario a partir de sus sesiones.
   const getStats = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
 
     const { data: sessions } = await supabase
       .from('workout_sessions')
       .select('id, started_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .not('finished_at', 'is', null)
 
     const list = sessions ?? []
@@ -110,7 +111,7 @@ export function useAchievements() {
   // Evalúa el catálogo contra las métricas, inserta los logros recién
   // desbloqueados y devuelve esos logros (para el toast).
   const checkAndUnlock = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
     const [catalog, unlocked, stats] = await Promise.all([getCatalog(), getUnlocked(), getStats()])
 
     const have = new Set(unlocked.map((u) => u.achievement_id))
@@ -121,7 +122,7 @@ export function useAchievements() {
     if (newly.length > 0) {
       const { error } = await supabase
         .from('user_achievements')
-        .insert(newly.map((a) => ({ user_id: user.id, achievement_id: a.id })))
+        .insert(newly.map((a) => ({ user_id: userId, achievement_id: a.id })))
       if (error) throw error
     }
     return newly
