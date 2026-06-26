@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer } from 'lucide-react'
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
 import ExercisePicker from '../../../components/features/ExercisePicker'
+
+const PERSIST_DELAY = 600
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function useElapsed(startedAt) {
@@ -90,8 +92,8 @@ function LastPerf({ sets }) {
   )
 }
 
-// ── Set row ────────────────────────────────────────────────────────────────
-function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
+// ── Set row (memoizado: solo re-renderiza si cambia su propia serie) ─────────
+const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onType, onComplete, onDelete }) {
   const styles = SET_TYPE_STYLES[set.set_type] ?? SET_TYPE_STYLES.normal
 
   return (
@@ -100,25 +102,27 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
 
       <input
         type="number"
+        inputMode="decimal"
         min="0"
         placeholder="kg"
         value={set.weight_kg ?? ''}
-        onChange={(e) => onUpdate(exId, setIndex, { weight_kg: e.target.value === '' ? null : Number(e.target.value) })}
+        onChange={(e) => onWeight(exId, setIndex, e.target.value === '' ? null : Number(e.target.value))}
         className="w-16 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-2 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
       />
       <input
         type="number"
+        inputMode="numeric"
         min="0"
         placeholder="reps"
         value={set.reps ?? ''}
-        onChange={(e) => onUpdate(exId, setIndex, { reps: e.target.value === '' ? null : Number(e.target.value) })}
+        onChange={(e) => onReps(exId, setIndex, e.target.value === '' ? null : Number(e.target.value))}
         className="w-16 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-2 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
       />
 
       <div className="relative shrink-0">
         <select
           value={set.set_type}
-          onChange={(e) => onUpdate(exId, setIndex, { set_type: e.target.value })}
+          onChange={(e) => onType(exId, setIndex, e.target.value)}
           className={`appearance-none text-xs font-display font-semibold uppercase tracking-wide rounded-lg pl-2 pr-5 py-1.5 focus:outline-none border-0 cursor-pointer ${styles.badge}`}
         >
           <option value="normal">Normal</option>
@@ -145,10 +149,12 @@ function SetRow({ exId, setIndex, set, onUpdate, onComplete, onDelete }) {
       </button>
     </div>
   )
-}
+})
 
-// ── Exercise card ──────────────────────────────────────────────────────────
-function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet, onDeleteSet, onDeleteExercise }) {
+// ── Exercise card (memoizado por ejercicio) ─────────────────────────────────
+const ExerciseCard = memo(function ExerciseCard({
+  exercise, lastPerf, onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
+}) {
   const lastSet = exercise.sets[exercise.sets.length - 1]
   const handleAddSet = () =>
     onAddSet(exercise.exerciseId, {
@@ -177,7 +183,17 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
             <span>tipo</span>
           </div>
           {exercise.sets.map((set, i) => (
-            <SetRow key={i} exId={exercise.exerciseId} setIndex={i} set={set} onUpdate={onUpdateSet} onComplete={onCompleteSet} onDelete={onDeleteSet} />
+            <SetRow
+              key={set.dbId ?? i}
+              exId={exercise.exerciseId}
+              setIndex={i}
+              set={set}
+              onWeight={onWeight}
+              onReps={onReps}
+              onType={onType}
+              onComplete={onComplete}
+              onDelete={onDeleteSet}
+            />
           ))}
         </div>
       )}
@@ -191,7 +207,7 @@ function ExerciseCard({ exercise, lastPerf, onAddSet, onUpdateSet, onCompleteSet
       </button>
     </div>
   )
-}
+})
 
 // ── Live stats bar ─────────────────────────────────────────────────────────
 function StatsBar({ exercises, elapsed }) {
@@ -220,7 +236,10 @@ function StatsBar({ exercises, elapsed }) {
 export default function Active() {
   const navigate = useNavigate()
   const { session, exercises, isActive } = useWorkoutStore()
-  const { addSet, updateSet, completeSet, deleteSet, deleteExercise, finishSession, cancelSession, getLastPerformance } = useWorkout()
+  const {
+    addSet, syncExerciseSets, completeSet, deleteSet,
+    deleteExercise, finishSession, cancelSession, getLastPerformance,
+  } = useWorkout()
   const restTimer = useRestTimer()
 
   const [showPicker, setShowPicker] = useState(false)
@@ -229,6 +248,28 @@ export default function Active() {
   const [finishing, setFinishing] = useState(false)
   const [error, setError] = useState(null)
   const elapsed = useElapsed(session?.startedAt)
+
+  // ── Persistencia diferida (debounce por ejercicio) ──────────────────────
+  const persistTimers = useRef({})
+
+  const persistExercise = useCallback((exId) => {
+    clearTimeout(persistTimers.current[exId])
+    persistTimers.current[exId] = setTimeout(() => {
+      delete persistTimers.current[exId]
+      syncExerciseSets(exId).catch(() => {})
+    }, PERSIST_DELAY)
+  }, [syncExerciseSets])
+
+  const flushAll = useCallback(async () => {
+    const timers = persistTimers.current
+    Object.values(timers).forEach(clearTimeout)
+    persistTimers.current = {}
+    const exs = useWorkoutStore.getState().exercises
+    await Promise.all(exs.map((ex) => syncExerciseSets(ex.exerciseId).catch(() => {})))
+  }, [syncExerciseSets])
+
+  // Limpieza de timers al desmontar
+  useEffect(() => () => Object.values(persistTimers.current).forEach(clearTimeout), [])
 
   useEffect(() => {
     if (!isActive) navigate('/app/workout/start', { replace: true })
@@ -240,43 +281,63 @@ export default function Active() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [])
 
-  const loadLastPerf = useCallback(async (exerciseId) => {
-    if (lastPerfs[exerciseId] !== undefined) return
-    setLastPerfs((p) => ({ ...p, [exerciseId]: null }))
-    const data = await getLastPerformance(exerciseId)
-    setLastPerfs((p) => ({ ...p, [exerciseId]: data }))
-  }, [lastPerfs, getLastPerformance])
-
+  // ── Última performance (se pide una sola vez por ejercicio) ──────────────
+  const requestedPerf = useRef(new Set())
   useEffect(() => {
     exercises.forEach((ex) => {
-      if (lastPerfs[ex.exerciseId] === undefined) loadLastPerf(ex.exerciseId)
+      if (requestedPerf.current.has(ex.exerciseId)) return
+      requestedPerf.current.add(ex.exerciseId)
+      getLastPerformance(ex.exerciseId)
+        .then((data) => setLastPerfs((p) => ({ ...p, [ex.exerciseId]: data })))
+        .catch(() => {})
     })
-  })
+  }, [exercises, getLastPerformance])
 
-  const handlePickExercise = (exercise) => {
-    useWorkoutStore.getState().addExercise(exercise)
-    setShowPicker(false)
-    loadLastPerf(exercise.id)
-  }
+  // ── Handlers estables (no disparan red por tecla: store ahora, DB diferido) ─
+  const onWeight = useCallback((exId, idx, value) => {
+    useWorkoutStore.getState().setWeightWithFill(exId, idx, value)
+    persistExercise(exId)
+  }, [persistExercise])
 
-  const handleCompleteSet = useCallback(async (exerciseId, setIndex) => {
-    try {
-      await completeSet(exerciseId, setIndex)
-      const set = useWorkoutStore.getState().exercises.find((ex) => ex.exerciseId === exerciseId)?.sets[setIndex]
-      if (set?.completed) restTimer.start()
-    } catch (err) {
-      setError(err.message)
-    }
+  const onReps = useCallback((exId, idx, value) => {
+    useWorkoutStore.getState().updateSet(exId, idx, { reps: value })
+    persistExercise(exId)
+  }, [persistExercise])
+
+  const onType = useCallback((exId, idx, value) => {
+    useWorkoutStore.getState().updateSet(exId, idx, { set_type: value })
+    persistExercise(exId)
+  }, [persistExercise])
+
+  const onComplete = useCallback((exId, idx) => {
+    completeSet(exId, idx).catch((err) => setError(err.message))
+    const set = useWorkoutStore.getState().exercises.find((e) => e.exerciseId === exId)?.sets[idx]
+    if (set?.completed) restTimer.start()
   }, [completeSet, restTimer])
 
-  const wrap = (fn) => async (...args) => {
-    try { await fn(...args) } catch (err) { setError(err.message) }
-  }
+  const onDeleteSet = useCallback((exId, idx) => {
+    deleteSet(exId, idx).catch((err) => setError(err.message))
+  }, [deleteSet])
+
+  const onDeleteExercise = useCallback((exId) => {
+    clearTimeout(persistTimers.current[exId])
+    deleteExercise(exId).catch((err) => setError(err.message))
+  }, [deleteExercise])
+
+  const onAddSet = useCallback((exId, data) => {
+    addSet(exId, data).catch((err) => setError(err.message))
+  }, [addSet])
+
+  const handlePickExercise = useCallback((exercise) => {
+    useWorkoutStore.getState().addExercise(exercise)
+    setShowPicker(false)
+  }, [])
 
   const handleFinish = async () => {
     try {
       setFinishing(true)
       restTimer.skip()
+      await flushAll() // guardar lo que quedó pendiente antes de cerrar
       const sessionId = await finishSession(notes || null)
       navigate(`/app/workout/summary/${sessionId}`, { replace: true })
     } catch (err) {
@@ -287,6 +348,8 @@ export default function Active() {
 
   const handleCancel = async () => {
     if (!window.confirm('¿Cancelar el entrenamiento? Se perderán todos los datos.')) return
+    Object.values(persistTimers.current).forEach(clearTimeout)
+    persistTimers.current = {}
     restTimer.skip()
     await cancelSession()
     navigate('/app/dashboard', { replace: true })
@@ -330,11 +393,13 @@ export default function Active() {
             key={ex.exerciseId}
             exercise={ex}
             lastPerf={lastPerfs[ex.exerciseId]}
-            onAddSet={wrap(addSet)}
-            onUpdateSet={wrap(updateSet)}
-            onCompleteSet={handleCompleteSet}
-            onDeleteSet={wrap(deleteSet)}
-            onDeleteExercise={wrap(deleteExercise)}
+            onAddSet={onAddSet}
+            onWeight={onWeight}
+            onReps={onReps}
+            onType={onType}
+            onComplete={onComplete}
+            onDeleteSet={onDeleteSet}
+            onDeleteExercise={onDeleteExercise}
           />
         ))}
 

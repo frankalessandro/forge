@@ -135,21 +135,48 @@ export function useWorkout() {
   }, [store])
 
   const completeSet = useCallback(async (exerciseId, setIndex) => {
-    const exercise = useWorkoutStore.getState().exercises.find(
-      (ex) => ex.exerciseId === exerciseId
-    )
-    const set = exercise?.sets[setIndex]
+    const set = useWorkoutStore
+      .getState()
+      .exercises.find((ex) => ex.exerciseId === exerciseId)?.sets[setIndex]
     if (!set?.dbId) return
 
     const nowCompleted = !set.completed
+    // Actualizamos el store primero: el check se ve al instante (sin esperar la red).
+    store.completeSet(exerciseId, setIndex)
+
     const { error } = await supabase
       .from('workout_sets')
       .update({ completed_at: nowCompleted ? new Date().toISOString() : null })
       .eq('id', set.dbId)
 
-    if (error) throw error
-    store.completeSet(exerciseId, setIndex)
+    if (error) {
+      store.completeSet(exerciseId, setIndex) // revertir si falló
+      throw error
+    }
   }, [store])
+
+  // Persiste (en background) todas las series de un ejercicio según el estado
+  // actual del store. Lo usa el logger con debounce para no escribir por tecla.
+  const syncExerciseSets = useCallback(async (exerciseId) => {
+    const ex = useWorkoutStore
+      .getState()
+      .exercises.find((e) => e.exerciseId === exerciseId)
+    if (!ex) return
+    await Promise.all(
+      ex.sets
+        .filter((s) => s.dbId)
+        .map((s) =>
+          supabase
+            .from('workout_sets')
+            .update({
+              weight_kg: s.weight_kg ?? null,
+              reps: s.reps ?? null,
+              set_type: s.set_type ?? 'normal',
+            })
+            .eq('id', s.dbId)
+        )
+    )
+  }, [])
 
   const deleteSet = useCallback(async (exerciseId, setIndex) => {
     const exercise = useWorkoutStore.getState().exercises.find(
@@ -229,6 +256,7 @@ export function useWorkout() {
     startSessionFromRoutine,
     addSet,
     updateSet,
+    syncExerciseSets,
     completeSet,
     deleteSet,
     deleteExercise,

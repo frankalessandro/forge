@@ -1,20 +1,32 @@
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, redirect } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import Login from './routes/auth/Login'
-import Register from './routes/auth/Register'
-import AppLayout from './routes/app/AppLayout'
-import Dashboard from './routes/app/Dashboard'
-import Exercises from './routes/app/Exercises'
-import ExerciseDetail from './routes/app/ExerciseDetail'
-import Routines from './routes/app/Routines'
-import RoutineDetail from './routes/app/RoutineDetail'
-import RoutineEditor from './routes/app/RoutineEditor'
-import Start from './routes/app/workout/Start'
-import Active from './routes/app/workout/Active'
-import Summary from './routes/app/workout/Summary'
-import Profile from './routes/app/Profile'
-import History from './routes/app/History'
-import HistoryDetail from './routes/app/HistoryDetail'
+
+// Lazy: cada ruta se descarga en su propio chunk (carga inicial mucho más liviana;
+// recharts, por ejemplo, queda aislado en el chunk del Perfil).
+const Login = lazy(() => import('./routes/auth/Login'))
+const Register = lazy(() => import('./routes/auth/Register'))
+const AppLayout = lazy(() => import('./routes/app/AppLayout'))
+const Dashboard = lazy(() => import('./routes/app/Dashboard'))
+const Exercises = lazy(() => import('./routes/app/Exercises'))
+const ExerciseDetail = lazy(() => import('./routes/app/ExerciseDetail'))
+const Routines = lazy(() => import('./routes/app/Routines'))
+const RoutineDetail = lazy(() => import('./routes/app/RoutineDetail'))
+const RoutineEditor = lazy(() => import('./routes/app/RoutineEditor'))
+const Start = lazy(() => import('./routes/app/workout/Start'))
+const Active = lazy(() => import('./routes/app/workout/Active'))
+const Summary = lazy(() => import('./routes/app/workout/Summary'))
+const Profile = lazy(() => import('./routes/app/Profile'))
+const History = lazy(() => import('./routes/app/History'))
+const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
+
+function Fallback() {
+  return <div className="min-h-screen bg-ink-950" />
+}
+
+function page(node) {
+  return <Suspense fallback={<Fallback />}>{node}</Suspense>
+}
 
 async function requireAuth() {
   const { data: { session } } = await supabase.auth.getSession()
@@ -33,12 +45,12 @@ async function rootRedirect() {
 
 export const router = createBrowserRouter([
   { path: '/', loader: rootRedirect },
-  { path: '/login', loader: redirectIfAuth, element: <Login /> },
-  { path: '/register', loader: redirectIfAuth, element: <Register /> },
+  { path: '/login', loader: redirectIfAuth, element: page(<Login />) },
+  { path: '/register', loader: redirectIfAuth, element: page(<Register />) },
   {
     path: '/app',
     loader: requireAuth,
-    element: <AppLayout />,
+    element: page(<AppLayout />),
     children: [
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'exercises', element: <Exercises /> },
