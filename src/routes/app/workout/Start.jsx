@@ -1,13 +1,44 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Play, Dumbbell, ArrowLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Play, Dumbbell, ChevronRight } from 'lucide-react'
 import { useWorkout } from '../../../hooks/useWorkout'
+import { useRoutines } from '../../../hooks/useRoutines'
+import PageHeader from '../../../components/ui/PageHeader'
+
+const CATEGORY_COLORS = {
+  PPL: 'bg-sky-400/15 text-sky-300',
+  'Full Body': 'bg-accent/15 text-accent',
+  'Upper Lower': 'bg-fuchsia-400/15 text-fuchsia-300',
+}
+
+function CategoryBadge({ category }) {
+  if (!category) return null
+  const cls = CATEGORY_COLORS[category] ?? 'bg-ink-800 text-zinc-400'
+  return <span className={`chip ${cls}`}>{category}</span>
+}
 
 export default function Start() {
   const navigate = useNavigate()
   const { startSession } = useWorkout()
+  const { getPublicRoutines, getUserRoutines } = useRoutines()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [routines, setRoutines] = useState([])
+  const [routinesLoading, setRoutinesLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [user, pub] = await Promise.all([getUserRoutines(), getPublicRoutines()])
+        setRoutines([...user, ...pub])
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setRoutinesLoading(false)
+      }
+    }
+    load()
+  }, [getUserRoutines, getPublicRoutines])
 
   const handleStartFree = async () => {
     try {
@@ -22,55 +53,67 @@ export default function Start() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <Link to="/app/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="text-lg font-bold text-gray-900">Iniciar entrenamiento</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-ink-950">
+      <PageHeader title="Entrenar" back="/app/dashboard" />
 
-      <main className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+      <main className="max-w-2xl mx-auto px-5 py-6 space-y-8">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-            {error}
-          </p>
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         )}
 
-        {/* Free session */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Sesión libre
-          </h2>
-          <button
-            onClick={handleStartFree}
-            disabled={loading}
-            className="w-full flex items-center gap-4 bg-gray-900 text-white rounded-xl px-6 py-5 hover:bg-gray-800 transition-colors disabled:opacity-60"
-          >
-            <div className="bg-white/20 rounded-lg p-2">
-              <Play size={20} fill="white" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-base">
-                {loading ? 'Iniciando...' : 'Empezar sesión vacía'}
-              </p>
-              <p className="text-sm text-gray-300">Agregá ejercicios sobre la marcha</p>
-            </div>
-          </button>
-        </section>
-
-        {/* Routines — Sprint 5 */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Desde una rutina
-          </h2>
-          <div className="bg-white border border-gray-200 rounded-xl px-6 py-10 text-center">
-            <Dumbbell size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500 font-medium">Todavía no tenés rutinas</p>
-            <p className="text-sm text-gray-400 mt-1">Creá rutinas en el Sprint 5</p>
+        {/* Sesión libre */}
+        <button
+          onClick={handleStartFree}
+          disabled={loading}
+          className="relative w-full overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 text-left glow-accent disabled:opacity-60 group"
+        >
+          <div className="absolute -right-5 -bottom-7 opacity-20">
+            <Play size={120} fill="currentColor" strokeWidth={0} />
           </div>
+          <p className="font-display uppercase tracking-[0.2em] text-xs font-semibold opacity-70">Sesión libre</p>
+          <p className="font-display font-bold uppercase text-3xl leading-none mt-2">
+            {loading ? 'Iniciando…' : 'Empezar vacía'}
+          </p>
+          <p className="text-sm font-medium opacity-70 mt-2">Agregá ejercicios sobre la marcha</p>
+        </button>
+
+        {/* Desde rutina */}
+        <section>
+          <h2 className="section-title mb-3">Desde una rutina</h2>
+          {routinesLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-16 card animate-pulse" />
+              ))}
+            </div>
+          ) : routines.length === 0 ? (
+            <div className="card px-6 py-10 text-center">
+              <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
+              <p className="display text-sm text-zinc-300">Todavía no hay rutinas</p>
+              <button onClick={() => navigate('/app/routines/new')} className="text-sm text-accent hover:text-accent-bright mt-1">
+                Crear una rutina
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {routines.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => navigate(`/app/routines/${r.id}`)}
+                  className="w-full card card-hover flex items-center gap-4 px-5 py-4 text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="display text-sm text-zinc-100 truncate">{r.name}</p>
+                      <CategoryBadge category={r.category} />
+                    </div>
+                    <p className="eyebrow">{r.exerciseCount} ejercicios</p>
+                  </div>
+                  <ChevronRight size={18} className="text-zinc-600 shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>

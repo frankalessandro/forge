@@ -19,6 +19,79 @@ export function useWorkout() {
     return data
   }, [store])
 
+  const startSessionFromRoutine = useCallback(async (routineId) => {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // 1. Traer los ejercicios de la rutina, ordenados
+    const { data: routine, error: routineError } = await supabase
+      .from('routines')
+      .select(`
+        id,
+        routine_exercises (
+          sets, reps, "order",
+          exercise_id,
+          exercises ( name )
+        )
+      `)
+      .eq('id', routineId)
+      .single()
+    if (routineError) throw routineError
+
+    const planned = (routine.routine_exercises ?? []).sort((a, b) => a.order - b.order)
+
+    // 2. Crear la sesión vinculada a la rutina
+    const { data: session, error: sessionError } = await supabase
+      .from('workout_sessions')
+      .insert({ user_id: user.id, routine_id: routineId })
+      .select('id, started_at')
+      .single()
+    if (sessionError) throw sessionError
+
+    store.startSession({ id: session.id, startedAt: session.started_at, notes: '' })
+
+    // 3. Pre-cargar series planificadas (reps de la rutina, peso a completar)
+    const rows = []
+    for (const re of planned) {
+      const count = re.sets ?? 1
+      for (let i = 0; i < count; i++) {
+        rows.push({
+          session_id: session.id,
+          exercise_id: re.exercise_id,
+          set_number: i + 1,
+          reps: re.reps ?? null,
+          weight_kg: null,
+          set_type: 'normal',
+        })
+      }
+    }
+
+    if (rows.length > 0) {
+      const { data: inserted, error: setsError } = await supabase
+        .from('workout_sets')
+        .insert(rows)
+        .select('id, exercise_id, set_number')
+      if (setsError) throw setsError
+
+      // 4. Poblar el store respetando el orden de la rutina
+      for (const re of planned) {
+        store.addExercise({ id: re.exercise_id, name: re.exercises?.name ?? 'Ejercicio' })
+        const exSets = inserted
+          .filter((s) => s.exercise_id === re.exercise_id)
+          .sort((a, b) => a.set_number - b.set_number)
+        for (const s of exSets) {
+          store.addSet(re.exercise_id, {
+            dbId: s.id,
+            reps: re.reps ?? null,
+            weight_kg: null,
+            set_type: 'normal',
+          })
+        }
+      }
+    }
+
+    return session
+  }, [store])
+
   const addSet = useCallback(async (exerciseId, setData) => {
     const session = useWorkoutStore.getState().session
     const exercise = useWorkoutStore.getState().exercises.find(
@@ -153,6 +226,7 @@ export function useWorkout() {
 
   return {
     startSession,
+    startSessionFromRoutine,
     addSet,
     updateSet,
     completeSet,
