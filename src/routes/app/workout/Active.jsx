@@ -100,7 +100,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
   const styles = SET_TYPE_STYLES[set.set_type] ?? SET_TYPE_STYLES.normal
 
   return (
-    <div className={`flex items-center gap-2 py-1.5 rounded-lg px-1 ${styles.row} ${set.completed ? 'opacity-50' : ''}`}>
+    <div className={`flex items-center gap-1.5 py-1.5 rounded-lg px-1 ${styles.row} ${set.completed ? 'opacity-50' : ''}`}>
       <span className="w-5 text-center stat-num text-sm text-zinc-500 shrink-0">{setIndex + 1}</span>
 
       <input
@@ -110,7 +110,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
         placeholder="kg"
         value={set.weight_kg ?? ''}
         onChange={(e) => onWeight(exId, setIndex, e.target.value === '' ? null : Number(e.target.value))}
-        className="w-16 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-2 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+        className="flex-1 min-w-0 w-0 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
       />
       <input
         type="number"
@@ -119,7 +119,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
         placeholder="reps"
         value={set.reps ?? ''}
         onChange={(e) => onReps(exId, setIndex, e.target.value === '' ? null : Number(e.target.value))}
-        className="w-16 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-2 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+        className="flex-1 min-w-0 w-0 text-center text-sm tabular-nums bg-ink-850 border border-ink-700 rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
       />
 
       <div className="relative shrink-0">
@@ -138,7 +138,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
 
       <button
         onClick={() => onComplete(exId, setIndex)}
-        className={`ml-auto p-1.5 rounded-lg transition-colors shrink-0 ${
+        className={`p-1.5 rounded-lg transition-colors shrink-0 ${
           set.completed
             ? 'bg-accent text-ink-950'
             : 'border border-ink-700 text-zinc-500 hover:border-accent hover:text-accent'
@@ -194,11 +194,11 @@ const ExerciseCard = memo(function ExerciseCard({
 
       {exercise.sets.length > 0 && (
         <div className="mb-2">
-          <div className="flex items-center gap-2 py-1 px-1 eyebrow">
-            <span className="w-5 text-center">#</span>
-            <span className="w-16 text-center">kg</span>
-            <span className="w-16 text-center">reps</span>
-            <span>tipo</span>
+          <div className="flex items-center gap-1.5 py-1 px-1 eyebrow">
+            <span className="w-5 text-center shrink-0">#</span>
+            <span className="flex-1 min-w-0 text-center">kg</span>
+            <span className="flex-1 min-w-0 text-center">reps</span>
+            <span className="shrink-0">tipo</span>
           </div>
           {exercise.sets.map((set, i) => (
             <SetRow

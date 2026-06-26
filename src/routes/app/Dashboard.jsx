@@ -38,18 +38,35 @@ export default function Dashboard() {
       const now = new Date()
       const monday = getMondayOfWeek(now)
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, training_days_per_week')
-        .maybeSingle()
+      // Racha semanal: cuenta semanas consecutivas que cumplen el objetivo
+      // de días/semana del usuario (no días consecutivos de calendario).
+      const since = getMonday(now)
+      since.setDate(since.getDate() - 11 * 7)
+
+      // Las tres lecturas son independientes: van en paralelo (3 round-trips → 1).
+      const [
+        { data: profile },
+        { data: weekSessions },
+        { data: recentSessions },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('name, training_days_per_week')
+          .maybeSingle(),
+        supabase
+          .from('workout_sessions')
+          .select('id, started_at')
+          .not('finished_at', 'is', null)
+          .gte('started_at', monday.toISOString()),
+        supabase
+          .from('workout_sessions')
+          .select('started_at')
+          .not('finished_at', 'is', null)
+          .gte('started_at', since.toISOString()),
+      ])
+
       if (profile?.name) setName(profile.name)
       const goal = profile?.training_days_per_week || 1
-
-      const { data: weekSessions } = await supabase
-        .from('workout_sessions')
-        .select('id, started_at')
-        .not('finished_at', 'is', null)
-        .gte('started_at', monday.toISOString())
 
       let weekVolume = 0
       if (weekSessions && weekSessions.length > 0) {
@@ -60,16 +77,6 @@ export default function Dashboard() {
           .in('session_id', ids)
         weekVolume = calcVolume(weekSets ?? [])
       }
-
-      // Racha semanal: cuenta semanas consecutivas que cumplen el objetivo
-      // de días/semana del usuario (no días consecutivos de calendario).
-      const since = getMonday(now)
-      since.setDate(since.getDate() - 11 * 7)
-      const { data: recentSessions } = await supabase
-        .from('workout_sessions')
-        .select('started_at')
-        .not('finished_at', 'is', null)
-        .gte('started_at', since.toISOString())
 
       const weeks = buildWeeks((recentSessions ?? []).map((s) => s.started_at), goal, 12)
       const streak = computeStreak(weeks)

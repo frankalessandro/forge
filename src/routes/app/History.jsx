@@ -57,19 +57,26 @@ export default function History() {
       const pageSessions = data.slice(0, PAGE_SIZE)
       setSessions(pageSessions)
 
+      // Una sola query para todas las series de la página (evita N+1 round-trips).
+      const ids = pageSessions.map((s) => s.id)
       const stats = {}
-      await Promise.all(
-        pageSessions.map(async (sess) => {
-          const { data: sets } = await supabase
-            .from('workout_sets')
-            .select('exercise_id, reps, weight_kg, set_type')
-            .eq('session_id', sess.id)
-          if (sets) {
-            const exerciseIds = new Set(sets.map((s) => s.exercise_id))
-            stats[sess.id] = { volume: calcVolume(sets), exerciseCount: exerciseIds.size }
-          }
-        })
-      )
+      if (ids.length > 0) {
+        const { data: allSets } = await supabase
+          .from('workout_sets')
+          .select('session_id, exercise_id, reps, weight_kg, set_type')
+          .in('session_id', ids)
+
+        const bySession = new Map()
+        for (const set of allSets ?? []) {
+          let entry = bySession.get(set.session_id)
+          if (!entry) { entry = []; bySession.set(set.session_id, entry) }
+          entry.push(set)
+        }
+        for (const [sessionId, sets] of bySession) {
+          const exerciseIds = new Set(sets.map((s) => s.exercise_id))
+          stats[sessionId] = { volume: calcVolume(sets), exerciseCount: exerciseIds.size }
+        }
+      }
       setSessionStats(stats)
       setLoading(false)
     }
