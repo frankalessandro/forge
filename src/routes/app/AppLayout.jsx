@@ -61,7 +61,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-ink-950">
-      <Toaster position="top-right" />
+      <Toaster position="top-right" theme="dark" />
 
       <div className={hideNav ? '' : 'pb-24'}>
         <Outlet />

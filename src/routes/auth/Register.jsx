@@ -12,10 +12,18 @@ import { levelFromActivity } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { AuthShell, OAuthButton, Divider } from './Login'
 
+// Requisitos de contraseña fuerte. Zod evalúa en orden y muestra el primer
+// mensaje que falle, así el usuario va corrigiendo de a uno.
 const credentialsSchema = z
   .object({
     email: z.string().email('Ingresa un email válido'),
-    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    password: z
+      .string()
+      .min(8, 'Usa al menos 8 caracteres')
+      .regex(/[A-Z]/, 'Incluye al menos una mayúscula (A-Z)')
+      .regex(/[a-z]/, 'Incluye al menos una minúscula (a-z)')
+      .regex(/[0-9]/, 'Incluye al menos un número (0-9)')
+      .regex(/[^A-Za-z0-9]/, 'Incluye al menos un símbolo (!@#$…)'),
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -156,7 +164,11 @@ export default function Register() {
             <div>
               <label className="field-label">Contraseña</label>
               <input type="password" autoComplete="new-password" {...register('password')} className="input" placeholder="••••••••" />
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
+              {errors.password ? (
+                <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>
+              ) : (
+                <p className="text-xs text-zinc-600 mt-1">Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo.</p>
+              )}
             </div>
             <div>
               <label className="field-label">Confirmar contraseña</label>
@@ -178,7 +190,6 @@ export default function Register() {
           <Divider />
 
           <OAuthButton
-            provider="google"
             label="Registrarse con Google"
             loading={oauthLoading === 'google'}
             disabled={isSubmitting || oauthLoading !== null}
