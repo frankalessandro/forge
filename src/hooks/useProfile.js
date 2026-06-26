@@ -1,8 +1,9 @@
+import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 
 export function useProfile() {
-  async function getProfile() {
+  const getProfile = useCallback(async () => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
     return supabase
@@ -10,9 +11,9 @@ export function useProfile() {
       .select('*')
       .eq('user_id', userId)
       .maybeSingle()
-  }
+  }, [])
 
-  async function updateProfile(data) {
+  const updateProfile = useCallback(async (data) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
     return supabase
@@ -20,9 +21,9 @@ export function useProfile() {
       .upsert({ ...data, user_id: userId, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
       .select()
       .single()
-  }
+  }, [])
 
-  async function uploadAvatar(file) {
+  const uploadAvatar = useCallback(async (file) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
     const ext = file.name.split('.').pop()
@@ -33,17 +34,17 @@ export function useProfile() {
     if (uploadError) return { data: null, error: uploadError }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
     return updateProfile({ avatar_url: `${publicUrl}?t=${Date.now()}` })
-  }
+  }, [updateProfile])
 
-  async function addBodyStat(weight_kg, recorded_at) {
+  const addBodyStat = useCallback(async (weight_kg, recorded_at) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
     const payload = { user_id: userId, weight_kg }
     if (recorded_at) payload.recorded_at = recorded_at
     return supabase.from('body_stats').insert(payload).select().single()
-  }
+  }, [])
 
-  async function getBodyStats() {
+  const getBodyStats = useCallback(async () => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: [], error: new Error('Not authenticated') }
     return supabase
@@ -52,7 +53,7 @@ export function useProfile() {
       .eq('user_id', userId)
       .order('recorded_at', { ascending: false })
       .limit(30)
-  }
+  }, [])
 
   return { getProfile, updateProfile, uploadAvatar, addBodyStat, getBodyStats }
 }
