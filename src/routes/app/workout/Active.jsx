@@ -5,7 +5,7 @@ import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
 import { useAchievements } from '../../../hooks/useAchievements'
-import { useToastStore } from '../../../stores/toastStore'
+import { sileo } from 'sileo'
 import { iconFor } from '../../../utils/achievementIcons'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 
@@ -260,7 +260,6 @@ export default function Active() {
   } = useWorkout()
   const restTimer = useRestTimer()
   const { checkAndUnlock } = useAchievements()
-  const addToast = useToastStore((s) => s.addToast)
 
   const [showPicker, setShowPicker] = useState(false)
   const [lastPerfs, setLastPerfs] = useState({})
@@ -364,7 +363,7 @@ export default function Active() {
       checkAndUnlock()
         .then((newly) => {
           for (const a of newly) {
-            addToast({ title: `¡Logro desbloqueado! ${a.name}`, description: a.description, icon: iconFor(a.icon) })
+            sileo.success({ title: `¡Logro desbloqueado! ${a.name}`, description: a.description })
           }
         })
         .catch(() => {})
