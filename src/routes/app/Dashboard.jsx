@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Play, ClipboardList, Dumbbell, ChevronRight } from 'lucide-react'
+import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { buildWeeks, computeStreak, getMonday } from '../../utils/streak'
 
 function getMondayOfWeek(date) {
   const d = new Date(date)
@@ -10,10 +11,6 @@ function getMondayOfWeek(date) {
   d.setDate(d.getDate() + diff)
   d.setHours(0, 0, 0, 0)
   return d
-}
-
-function toDateStr(date) {
-  return date.toISOString().slice(0, 10)
 }
 
 function calcVolume(sets) {
@@ -41,17 +38,35 @@ export default function Dashboard() {
       const now = new Date()
       const monday = getMondayOfWeek(now)
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name')
-        .maybeSingle()
-      if (profile?.name) setName(profile.name)
+      // Racha semanal: cuenta semanas consecutivas que cumplen el objetivo
+      // de días/semana del usuario (no días consecutivos de calendario).
+      const since = getMonday(now)
+      since.setDate(since.getDate() - 11 * 7)
 
-      const { data: weekSessions } = await supabase
-        .from('workout_sessions')
-        .select('id, started_at')
-        .not('finished_at', 'is', null)
-        .gte('started_at', monday.toISOString())
+      // Las tres lecturas son independientes: van en paralelo (3 round-trips → 1).
+      const [
+        { data: profile },
+        { data: weekSessions },
+        { data: recentSessions },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('name, training_days_per_week')
+          .maybeSingle(),
+        supabase
+          .from('workout_sessions')
+          .select('id, started_at')
+          .not('finished_at', 'is', null)
+          .gte('started_at', monday.toISOString()),
+        supabase
+          .from('workout_sessions')
+          .select('started_at')
+          .not('finished_at', 'is', null)
+          .gte('started_at', since.toISOString()),
+      ])
+
+      if (profile?.name) setName(profile.name)
+      const goal = profile?.training_days_per_week || 1
 
       let weekVolume = 0
       if (weekSessions && weekSessions.length > 0) {
@@ -63,26 +78,8 @@ export default function Dashboard() {
         weekVolume = calcVolume(weekSets ?? [])
       }
 
-      const { data: allSessions } = await supabase
-        .from('workout_sessions')
-        .select('started_at')
-        .not('finished_at', 'is', null)
-        .order('started_at', { ascending: false })
-
-      let streak = 0
-      if (allSessions && allSessions.length > 0) {
-        const sessionDates = new Set(allSessions.map((s) => toDateStr(new Date(s.started_at))))
-        const today = toDateStr(now)
-        const yesterday = toDateStr(new Date(now.getTime() - 86400000))
-        let current = sessionDates.has(today) ? today : sessionDates.has(yesterday) ? yesterday : null
-        if (current) {
-          const cursor = new Date(current)
-          while (sessionDates.has(toDateStr(cursor))) {
-            streak++
-            cursor.setDate(cursor.getDate() - 1)
-          }
-        }
-      }
+      const weeks = buildWeeks((recentSessions ?? []).map((s) => s.started_at), goal, 12)
+      const streak = computeStreak(weeks)
 
       setStats({ workouts: weekSessions?.length ?? 0, volume: weekVolume, streak })
       setLoading(false)
@@ -100,10 +97,10 @@ export default function Dashboard() {
             {name || 'Atleta'}
           </h1>
         </div>
-        <div className="flex items-center gap-1.5 chip-accent">
+        <Link to="/app/streak" className="flex items-center gap-1.5 chip-accent hover:opacity-90 transition-opacity">
           <Flame size={13} />
-          {loading ? '·' : stats.streak} días
-        </div>
+          {loading ? '·' : stats.streak} sem
+        </Link>
       </header>
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-8">
@@ -144,7 +141,7 @@ export default function Dashboard() {
                 suffix="t"
                 label="Volumen"
               />
-              <Stat value={stats.streak} label="Racha" accent />
+              <Stat value={stats.streak} suffix="sem" label="Racha" accent to="/app/streak" />
             </div>
           )}
         </section>
@@ -156,6 +153,7 @@ export default function Dashboard() {
             <AccessRow to="/app/routines" icon={ClipboardList} title="Rutinas" subtitle="Plantillas y las tuyas" />
             <AccessRow to="/app/exercises" icon={Dumbbell} title="Ejercicios" subtitle="Catálogo por músculo" />
             <AccessRow to="/app/history" icon={Play} title="Progreso" subtitle="Historial y evolución" />
+            <AccessRow to="/app/friends" icon={Users} title="Amigos" subtitle="Compara tu progreso" />
           </div>
         </section>
       </main>
@@ -163,20 +161,20 @@ export default function Dashboard() {
   )
 }
 
-function Stat({ value, label, suffix, accent }) {
-  return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        accent ? 'bg-accent/10 border-accent/25' : 'bg-ink-900 border-ink-800'
-      }`}
-    >
+function Stat({ value, label, suffix, accent, to }) {
+  const className = `block rounded-2xl border p-4 ${
+    accent ? 'bg-accent/10 border-accent/25' : 'bg-ink-900 border-ink-800'
+  } ${to ? 'card-hover' : ''}`
+  const inner = (
+    <>
       <p className={`stat-num text-3xl ${accent ? 'text-accent' : 'text-zinc-100'}`}>
         {typeof value === 'number' ? value.toLocaleString('es-AR') : value}
         {suffix && <span className="text-base font-semibold text-zinc-500 ml-0.5">{suffix}</span>}
       </p>
       <p className="eyebrow mt-1.5">{label}</p>
-    </div>
+    </>
   )
+  return to ? <Link to={to} className={className}>{inner}</Link> : <div className={className}>{inner}</div>
 }
 
 function AccessRow({ to, icon: Icon, title, subtitle }) {

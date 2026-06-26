@@ -24,10 +24,20 @@
     <meta name="twitter:description" content="Armá rutinas según tu objetivo, registrá tus series y seguí tu progreso." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fuentes no bloqueantes: se cargan async (media=print → all on load) para
+         no retrasar el First Contentful Paint en móvil. display=swap evita FOIT. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
     <title>FORGE — Gym Tracker</title>
   </head>
   <body>

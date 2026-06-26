@@ -15,7 +15,7 @@ export function useExercises({ muscleGroupId, equipment, search } = {}) {
 
       let query = supabase
         .from('exercises')
-        .select('id, name, category, equipment, muscle_group_id, muscle_groups(id, name)')
+        .select('id, name, category, equipment, image_url, muscle_group_id, muscle_groups(id, name)')
         .order('name')
 
       if (muscleGroupId) query = query.eq('muscle_group_id', muscleGroupId)
@@ -90,4 +90,30 @@ export function useExercise(id) {
   }, [id])
 
   return { exercise, loading, error }
+}
+
+export function useExerciseVariations(exerciseId) {
+  const [variations, setVariations] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!exerciseId) return
+    let cancelled = false
+
+    supabase
+      .from('exercise_variations')
+      .select('id, name, description, image_url, video_url')
+      .eq('exercise_id', exerciseId)
+      .order('sort_order')
+      .then(({ data }) => {
+        if (!cancelled) {
+          setVariations(data ?? [])
+          setLoading(false)
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [exerciseId])
+
+  return { variations, loading }
 }

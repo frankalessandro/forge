@@ -12,7 +12,7 @@ export const useWorkoutStore = create((set) => ({
     set((s) => ({
       exercises: [
         ...s.exercises,
-        { exerciseId: exercise.id, name: exercise.name, sets: [] },
+        { exerciseId: exercise.id, name: exercise.name, imageUrl: exercise.image_url ?? null, sets: [] },
       ],
     })),
 

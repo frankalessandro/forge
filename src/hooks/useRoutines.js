@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { planSplit } from '../utils/routineTemplates'
 
 export function useRoutines() {
   const getPublicRoutines = useCallback(async () => {
@@ -107,6 +108,53 @@ export function useRoutines() {
     if (insError) throw insError
   }, [])
 
+  // Genera un split de rutinas según el objetivo, nivel y días/semana del usuario.
+  // Trae el catálogo, arma el plan (lógica pura en routineTemplates) y persiste
+  // cada rutina con sus ejercicios. Devuelve las rutinas creadas.
+  const generateForGoal = useCallback(async ({ goal, level, daysPerWeek }) => {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: exercises, error: exError } = await supabase
+      .from('exercises')
+      .select('id, name, equipment, primary_muscles, muscle_groups(name)')
+    if (exError) throw exError
+
+    const plan = planSplit({ goal, level, daysPerWeek, exercises: exercises ?? [] })
+    if (plan.length === 0) {
+      throw new Error('No hay ejercicios suficientes para generar la rutina.')
+    }
+
+    const created = []
+    for (const routine of plan) {
+      const { data: inserted, error: rError } = await supabase
+        .from('routines')
+        .insert({
+          user_id: user.id,
+          name: routine.name,
+          description: routine.description ?? null,
+          category: routine.category ?? null,
+          is_public: false,
+        })
+        .select('id')
+        .single()
+      if (rError) throw rError
+
+      const rows = routine.exercises.map((it, idx) => ({
+        routine_id: inserted.id,
+        exercise_id: it.exercise_id,
+        sets: it.sets,
+        reps: it.reps,
+        rest_seconds: it.rest_seconds,
+        order: idx + 1,
+      }))
+      const { error: reError } = await supabase.from('routine_exercises').insert(rows)
+      if (reError) throw reError
+
+      created.push({ id: inserted.id, name: routine.name })
+    }
+    return created
+  }, [])
+
   return {
     getPublicRoutines,
     getUserRoutines,
@@ -115,5 +163,6 @@ export function useRoutines() {
     updateRoutine,
     deleteRoutine,
     replaceRoutineExercises,
+    generateForGoal,
   }
 }

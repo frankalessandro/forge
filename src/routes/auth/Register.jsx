@@ -6,12 +6,14 @@ import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check, MailCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
+import { useRoutines } from '../../hooks/useRoutines'
+import { levelFromActivity } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { AuthShell } from './Login'
 
 const credentialsSchema = z
   .object({
-    email: z.string().email('Ingresá un email válido'),
+    email: z.string().email('Ingresa un email válido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
     confirmPassword: z.string(),
   })
@@ -28,13 +30,15 @@ const GOALS = [
   { value: 'health', label: 'Salud general', icon: Heart },
 ]
 
-const ONBOARDING_STEPS = 5
+const ONBOARDING_STEPS = 6
+const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
 
 export default function Register() {
   const navigate = useNavigate()
   const { updateProfile, addBodyStat } = useProfile()
+  const { generateForGoal } = useRoutines()
 
-  // step 0 = credenciales · 1..5 = entrevista · 'confirm' = requiere verificar email
+  // step 0 = credenciales · 1..6 = entrevista · 'confirm' = requiere verificar email
   const [step, setStep] = useState(0)
   const [profile, setProfile] = useState({
     name: '',
@@ -61,7 +65,7 @@ export default function Register() {
   const onCreateAccount = async ({ email, password }) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
-      setError('root', { message: 'No se pudo crear la cuenta. Probá con otro email.' })
+      setError('root', { message: 'No se pudo crear la cuenta. Prueba con otro email.' })
       return
     }
     // Si hay sesión, seguimos a la entrevista. Si no, hay que confirmar el email.
@@ -85,6 +89,20 @@ export default function Register() {
     if (Object.keys(payload).length) await updateProfile(payload)
     if (profile.weight_kg) await addBodyStat(Number(profile.weight_kg))
 
+    // Genera una rutina inicial a partir del objetivo elegido. No bloquea el
+    // onboarding: si falla, el usuario igual entra y puede generarla luego.
+    if (profile.goal) {
+      try {
+        await generateForGoal({
+          goal: profile.goal,
+          level: levelFromActivity(profile.activity_level),
+          daysPerWeek: profile.training_days_per_week !== '' ? Number(profile.training_days_per_week) : 3,
+        })
+      } catch {
+        // silencioso: la generación es un extra, no un requisito del registro
+      }
+    }
+
     navigate('/app/dashboard', { replace: true })
   }
 
@@ -99,9 +117,9 @@ export default function Register() {
           <div className="w-12 h-12 rounded-2xl bg-accent/15 text-accent flex items-center justify-center mx-auto mb-4">
             <MailCheck size={24} />
           </div>
-          <h1 className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100">Revisá tu email</h1>
+          <h1 className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100">Revisa tu email</h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Te enviamos un enlace para confirmar tu cuenta. Después de confirmarla, iniciá sesión.
+            Te enviamos un enlace para confirmar tu cuenta. Después de confirmarla, inicia sesión.
           </p>
           <Link to="/login" className="btn-accent w-full py-3 text-sm mt-6">Ir a iniciar sesión</Link>
         </div>
@@ -114,7 +132,7 @@ export default function Register() {
       <AuthShell>
         <div className="card p-7">
           <h1 className="font-display font-bold uppercase tracking-tight text-2xl text-zinc-100">Crear cuenta</h1>
-          <p className="text-sm text-zinc-500 mt-1 mb-6">Empezá a registrar tu progreso.</p>
+          <p className="text-sm text-zinc-500 mt-1 mb-6">Empieza a registrar tu progreso.</p>
 
           <form onSubmit={handleSubmit(onCreateAccount)} className="space-y-4">
             <div>
@@ -146,8 +164,8 @@ export default function Register() {
         </div>
 
         <p className="text-sm text-zinc-500 text-center mt-5">
-          ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">Iniciá sesión</Link>
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">Inicia sesión</Link>
         </p>
       </AuthShell>
     )
@@ -161,8 +179,8 @@ export default function Register() {
 
         {step === 1 && (
           <Step
-            eyebrow="Paso 1 de 5"
-            title="¿Cómo te llamás?"
+            eyebrow="Paso 1 de 6"
+            title="¿Cómo te llamas?"
             subtitle="Así personalizamos tu experiencia."
           >
             <input
@@ -178,7 +196,7 @@ export default function Register() {
         )}
 
         {step === 2 && (
-          <Step eyebrow="Paso 2 de 5" title="Sobre vos" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
+          <Step eyebrow="Paso 2 de 6" title="Sobre ti" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
             <label className="block mb-4">
               <span className="field-label">Fecha de nacimiento</span>
               <input
@@ -210,7 +228,7 @@ export default function Register() {
         )}
 
         {step === 3 && (
-          <Step eyebrow="Paso 3 de 5" title="Tus medidas" subtitle="En kg y cm. Lo usamos para tu IMC y progreso.">
+          <Step eyebrow="Paso 3 de 6" title="Tus medidas" subtitle="En kg y cm. Lo usamos para tu IMC y progreso.">
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="field-label">Altura (cm)</span>
@@ -240,7 +258,7 @@ export default function Register() {
         )}
 
         {step === 4 && (
-          <Step eyebrow="Paso 4 de 5" title="¿Qué tan activo sos?" subtitle="Tu nivel de actividad y cuántos días entrenás.">
+          <Step eyebrow="Paso 4 de 6" title="¿Qué tan activo eres?" subtitle="Lo usamos para calibrar tus rutinas.">
             <div className="space-y-2.5">
               {ACTIVITY_LEVELS.map(({ value, label, desc }) => {
                 const active = profile.activity_level === value
@@ -262,23 +280,42 @@ export default function Register() {
                 )
               })}
             </div>
-            <label className="block mt-4">
-              <span className="field-label">Días de entreno por semana</span>
-              <input
-                type="number"
-                min="0"
-                max="7"
-                value={profile.training_days_per_week}
-                onChange={(e) => set({ training_days_per_week: e.target.value })}
-                className="input text-center text-lg py-3"
-                placeholder="4"
-              />
-            </label>
           </Step>
         )}
 
         {step === 5 && (
-          <Step eyebrow="Paso 5 de 5" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
+          <Step
+            eyebrow="Paso 5 de 6"
+            title="¿Cuántos días por semana?"
+            subtitle="Esta es tu meta semanal: tu racha se mantiene mientras la cumplas, entrenes los días que entrenes."
+          >
+            <div className="grid grid-cols-3 gap-3">
+              {TRAINING_DAYS.map((n) => {
+                const active = Number(profile.training_days_per_week) === n
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => set({ training_days_per_week: String(n) })}
+                    className={`flex flex-col items-center gap-1 rounded-2xl px-4 py-4 border transition-colors ${
+                      active ? 'bg-accent/10 border-accent/50 text-accent' : 'bg-ink-850 border-ink-700 hover:border-ink-600 text-zinc-200'
+                    }`}
+                  >
+                    <span className="stat-num text-3xl leading-none">{n}</span>
+                    <span className="text-xs text-zinc-500">{n === 7 ? 'todos' : 'días'}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-2 mt-4 text-xs text-zinc-500 bg-accent/5 border border-accent/15 rounded-xl px-3.5 py-2.5">
+              <Flame size={14} className="text-accent shrink-0" />
+              <span>Podrás cambiar esta meta cuando quieras desde tu perfil.</span>
+            </div>
+          </Step>
+        )}
+
+        {step === 6 && (
+          <Step eyebrow="Paso 6 de 6" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
             <div className="space-y-2.5">
               {GOALS.map(({ value, label, icon: Icon }) => {
                 const active = profile.goal === value

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { LogOut, Info } from 'lucide-react'
+import { LogOut, Info, Users } from 'lucide-react'
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
 import PageHeader from '../../components/ui/PageHeader'
 import Sheet from '../../components/ui/Sheet'
+import AchievementsPanel from '../../components/features/AchievementsPanel'
 import {
   GENDERS,
   ACTIVITY_LEVELS,
@@ -127,7 +128,7 @@ export default function Profile() {
     e.preventDefault()
     setStatError(null)
     const w = parseFloat(statWeight)
-    if (!w || w <= 0) { setStatError('Ingresá un peso válido.'); return }
+    if (!w || w <= 0) { setStatError('Ingresa un peso válido.'); return }
     const { error } = await addBodyStat(w, statDate ? new Date(statDate).toISOString() : undefined)
     if (error) { setStatError(error.message); return }
     setStatWeight('')
@@ -181,13 +182,19 @@ export default function Profile() {
                   {avatarName ? avatarName[0].toUpperCase() : '?'}
                 </span>
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none">
                   {avatarName || 'Sin nombre'}
                 </p>
-                <p className="text-sm text-zinc-500 mt-1">Editá tu perfil abajo</p>
+                <p className="text-sm text-zinc-500 mt-1">Edita tu perfil abajo</p>
               </div>
+              <Link to="/app/friends" className="btn-dark px-3 py-2 text-xs shrink-0">
+                <Users size={15} />
+                Amigos
+              </Link>
             </div>
+
+            <AchievementsPanel />
 
             <form onSubmit={handleSubmit(onSubmit)} className="card p-5 space-y-4">
               <h2 className="section-title">Datos personales</h2>
@@ -240,7 +247,9 @@ export default function Profile() {
                 <div>
                   <label className="field-label">Días de entreno / semana</label>
                   <input type="number" min="0" max="7" {...register('training_days_per_week')} className="input" placeholder="4" />
-                  {errors.training_days_per_week && <p className="text-xs text-red-400 mt-1">{errors.training_days_per_week.message}</p>}
+                  {errors.training_days_per_week
+                    ? <p className="text-xs text-red-400 mt-1">{errors.training_days_per_week.message}</p>
+                    : <p className="text-xs text-zinc-600 mt-1">Es tu meta para mantener la racha.</p>}
                 </div>
               </div>
 

@@ -74,7 +74,7 @@ export default function Start() {
           <p className="font-display font-bold uppercase text-3xl leading-none mt-2">
             {loading ? 'Iniciando…' : 'Empezar vacía'}
           </p>
-          <p className="text-sm font-medium opacity-70 mt-2">Agregá ejercicios sobre la marcha</p>
+          <p className="text-sm font-medium opacity-70 mt-2">Agrega ejercicios sobre la marcha</p>
         </button>
 
         {/* Desde rutina */}

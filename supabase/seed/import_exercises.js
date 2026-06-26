@@ -94,6 +94,12 @@ async function run() {
       .filter(Boolean)
     const equipmentStr = equipmentNames.join(', ') || null
 
+    // Media: imagen (preferimos la principal) y video/animación si los hay.
+    const images = ex.images || []
+    const mainImage = images.find((img) => img.is_main) || images[0]
+    const imageUrl = mainImage?.image || null
+    const videoUrl = (ex.videos || [])[0]?.video || null
+
     exerciseRows.push({
       name,
       description,
@@ -102,6 +108,8 @@ async function run() {
       equipment: equipmentStr,
       primary_muscles: primaryMuscles,
       secondary_muscles: secondaryMuscles,
+      image_url: imageUrl,
+      video_url: videoUrl,
       is_custom: false,
     })
   }
@@ -118,6 +126,29 @@ async function run() {
     inserted += batch.length
     console.log(`Upserted exercises: ${inserted}/${exerciseRows.length}`)
   }
+
+  // Backfill de media para ejercicios ya existentes (p. ej. los del seed
+  // curado). El upsert con ignoreDuplicates no toca filas existentes, así que
+  // rellenamos image_url/video_url SOLO donde faltan, sin pisar nombre ni
+  // descripción curados.
+  const withMedia = exerciseRows.filter((r) => r.image_url || r.video_url)
+  let mediaUpdated = 0
+  for (const row of withMedia) {
+    const patch = {}
+    if (row.image_url) patch.image_url = row.image_url
+    if (row.video_url) patch.video_url = row.video_url
+
+    // image_url is null OR video_url is null → todavía le falta algo de media.
+    const { data, error } = await supabase
+      .from('exercises')
+      .update(patch)
+      .eq('name', row.name)
+      .or('image_url.is.null,video_url.is.null')
+      .select('id')
+    if (error) throw new Error(`media backfill (${row.name}): ${error.message}`)
+    if (data?.length) mediaUpdated += data.length
+  }
+  console.log(`Media backfilled on ${mediaUpdated} existing exercises`)
 
   console.log('Done.')
 }
