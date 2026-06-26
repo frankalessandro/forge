@@ -19,6 +19,7 @@ const GOALS = [
 
 const STEPS = 6
 const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
+const MAX_GOALS = 3
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -39,7 +40,7 @@ export default function Onboarding() {
     weight_kg: '',
     activity_level: '',
     training_days_per_week: '',
-    goal: '',
+    goals: [],
   })
   const [saving, setSaving] = useState(false)
 
@@ -49,6 +50,14 @@ export default function Onboarding() {
   }, [needsOnboarding, navigate])
 
   const patch = (update) => setData((d) => ({ ...d, ...update }))
+
+  const toggleGoal = (value) =>
+    setData((d) => {
+      const has = d.goals.includes(value)
+      if (has) return { ...d, goals: d.goals.filter((g) => g !== value) }
+      if (d.goals.length >= MAX_GOALS) return d
+      return { ...d, goals: [...d.goals, value] }
+    })
 
   const finish = async () => {
     setSaving(true)
@@ -60,16 +69,19 @@ export default function Onboarding() {
     if (data.weight_kg) payload.weight_kg = Number(data.weight_kg)
     if (data.activity_level) payload.activity_level = data.activity_level
     if (data.training_days_per_week !== '') payload.training_days_per_week = Number(data.training_days_per_week)
-    if (data.goal) payload.goal = data.goal
+    if (data.goals.length) {
+      payload.goals = data.goals
+      payload.goal = data.goals[0] // principal, para rutinas y perfil
+    }
     // Guarda la foto de Google en el perfil
     if (meta.avatar_url) payload.avatar_url = meta.avatar_url
 
     await updateProfile(payload)
 
-    if (data.goal) {
+    if (data.goals.length) {
       try {
         await generateForGoal({
-          goal: data.goal,
+          goal: data.goals[0],
           level: levelFromActivity(data.activity_level),
           daysPerWeek: data.training_days_per_week !== '' ? Number(data.training_days_per_week) : 3,
         })
@@ -235,17 +247,25 @@ export default function Onboarding() {
         )}
 
         {step === 6 && (
-          <Step eyebrow="Paso 6 de 6" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
+          <Step
+            eyebrow="Paso 6 de 6"
+            title="¿Cuáles son tus objetivos?"
+            subtitle="Elige hasta 3. El primero orienta tus rutinas generadas."
+          >
             <div className="space-y-2.5">
               {GOALS.map(({ value, label, icon: Icon }) => {
-                const active = data.goal === value
+                const active = data.goals.includes(value)
+                const disabled = !active && data.goals.length >= MAX_GOALS
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => patch({ goal: value })}
+                    onClick={() => toggleGoal(value)}
+                    disabled={disabled}
                     className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 border transition-colors text-left ${
-                      active ? 'bg-accent/10 border-accent/50' : 'bg-ink-850 border-ink-700 hover:border-ink-600'
+                      active
+                        ? 'bg-accent/10 border-accent/50'
+                        : `bg-ink-850 border-ink-700 ${disabled ? 'opacity-40' : 'hover:border-ink-600'}`
                     }`}
                   >
                     <div className={`rounded-xl p-2 shrink-0 ${active ? 'bg-accent text-ink-950' : 'bg-ink-800 text-accent'}`}>
