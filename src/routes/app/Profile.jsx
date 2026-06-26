@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { LogOut, Info, Users } from 'lucide-react'
-import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
+import { LogOut, Info, Users, Pencil } from 'lucide-react'
+import { useConfirm } from '../../hooks/useConfirm'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
+import { useAchievements } from '../../hooks/useAchievements'
+import { useFriends } from '../../hooks/useFriends'
+import { rankForXp } from '../../utils/ranks'
 import PageHeader from '../../components/ui/PageHeader'
 import Sheet from '../../components/ui/Sheet'
-import AchievementsPanel from '../../components/features/AchievementsPanel'
+import RankCard from '../../components/features/RankCard'
+const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 import {
-  GENDERS,
   ACTIVITY_LEVELS,
   calcAge,
   calcBMI,
@@ -21,28 +21,6 @@ import {
   calcHRZones,
   healthyWeightRange,
 } from '../../utils/healthMetrics'
-
-const profileSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido').optional().or(z.literal('')),
-  birth_date: z.string().optional().or(z.literal('')),
-  gender: z.enum(['male', 'female', '']).optional(),
-  height_cm: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().positive().optional()),
-  weight_kg: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().positive().optional()),
-  activity_level: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active', '']).optional(),
-  training_days_per_week: z.preprocess(
-    (v) => (v === '' || v == null ? undefined : Number(v)),
-    z.number().int().min(0).max(7).optional(),
-  ),
-  goal: z.enum(['lose_fat', 'gain_muscle', 'strength', 'endurance', 'health', '']).optional(),
-})
-
-const GOAL_LABELS = {
-  lose_fat: 'Perder grasa',
-  gain_muscle: 'Ganar músculo',
-  strength: 'Fuerza',
-  endurance: 'Resistencia',
-  health: 'Salud general',
-}
 
 function formatDate(isoStr) {
   const d = new Date(isoStr)
@@ -58,48 +36,33 @@ function todayISO() {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { getProfile, updateProfile, addBodyStat, getBodyStats } = useProfile()
+  const { getProfile, addBodyStat, getBodyStats } = useProfile()
+  const { getCatalog, getUnlocked, checkAndUnlock } = useAchievements()
+  const { listFriends } = useFriends()
 
+  const { confirm, modal } = useConfirm()
   const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState(null)
+  const [xp, setXp] = useState(0)
+  const [friendCount, setFriendCount] = useState(null)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [saveStatus, setSaveStatus] = useState(null)
   const [bodyStats, setBodyStats] = useState([])
   const [statWeight, setStatWeight] = useState('')
   const [statDate, setStatDate] = useState(todayISO())
   const [statError, setStatError] = useState(null)
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(profileSchema) })
-
-  const watchedWeight = watch('weight_kg')
-  const watchedHeight = watch('height_cm')
-  const watchedBirth = watch('birth_date')
-  const watchedGender = watch('gender')
-
   useEffect(() => {
+    let cancelled = false
     async function load() {
       const { data } = await getProfile()
-      if (data) {
-        reset({
-          name: data.name ?? '',
-          birth_date: data.birth_date ?? '',
-          gender: data.gender ?? '',
-          height_cm: data.height_cm ?? '',
-          weight_kg: data.weight_kg ?? '',
-          activity_level: data.activity_level ?? '',
-          training_days_per_week: data.training_days_per_week ?? '',
-          goal: data.goal ?? '',
-        })
-      }
-      setLoading(false)
+      if (!cancelled && data) setProfile(data)
+      if (!cancelled) setLoading(false)
     }
     load()
     loadBodyStats()
+    loadRank()
+    loadFriendCount()
+    return () => { cancelled = true }
   }, [])
 
   async function loadBodyStats() {
@@ -107,21 +70,21 @@ export default function Profile() {
     setBodyStats(data ?? [])
   }
 
-  async function onSubmit(values) {
-    setSaveStatus(null)
-    const clean = {}
-    if (values.name !== undefined && values.name !== '') clean.name = values.name
-    if (values.birth_date !== undefined && values.birth_date !== '') clean.birth_date = values.birth_date
-    if (values.gender !== undefined && values.gender !== '') clean.gender = values.gender
-    if (values.height_cm !== undefined) clean.height_cm = values.height_cm
-    if (values.weight_kg !== undefined) clean.weight_kg = values.weight_kg
-    if (values.activity_level !== undefined && values.activity_level !== '') clean.activity_level = values.activity_level
-    if (values.training_days_per_week !== undefined) clean.training_days_per_week = values.training_days_per_week
-    if (values.goal !== undefined && values.goal !== '') clean.goal = values.goal
+  async function loadRank() {
+    // Desbloquea retroactivamente lo que corresponda y calcula la XP del rango.
+    await checkAndUnlock().catch(() => {})
+    const [catalog, unlocked] = await Promise.all([getCatalog(), getUnlocked()])
+    const have = new Set(unlocked.map((u) => u.achievement_id))
+    setXp(catalog.filter((a) => have.has(a.id)).reduce((sum, a) => sum + (a.xp ?? 0), 0))
+  }
 
-    const { error } = await updateProfile(clean)
-    if (error) setSaveStatus({ type: 'error', msg: error.message })
-    else setSaveStatus({ type: 'success', msg: 'Perfil guardado correctamente.' })
+  async function loadFriendCount() {
+    try {
+      const friends = await listFriends()
+      setFriendCount(friends.length)
+    } catch {
+      setFriendCount(null)
+    }
   }
 
   async function handleAddStat(e) {
@@ -137,33 +100,42 @@ export default function Profile() {
   }
 
   async function handleLogout() {
+    const ok = await confirm({
+      title: '¿Cerrar sesión?',
+      description: 'Tendrás que volver a iniciar sesión para acceder a tu cuenta.',
+      confirmLabel: 'Cerrar sesión',
+      danger: true,
+    })
+    if (!ok) return
     await supabase.auth.signOut()
     navigate('/login')
   }
 
-  const weightNum = Number(watchedWeight) || null
-  const heightNum = Number(watchedHeight) || null
-  const age = calcAge(watchedBirth)
+  const weightNum = Number(profile?.weight_kg) || null
+  const heightNum = Number(profile?.height_cm) || null
+  const age = calcAge(profile?.birth_date)
 
   const bmi = calcBMI(weightNum, heightNum)
   const bmiInfo = bmi ? bmiCategory(bmi) : null
-  const bmr = calcBMR({ weightKg: weightNum, heightCm: heightNum, age, gender: watchedGender })
+  const bmr = calcBMR({ weightKg: weightNum, heightCm: heightNum, age, gender: profile?.gender })
   const maxHR = calcMaxHR(age)
   const hrZones = calcHRZones(maxHR)
   const weightRange = healthyWeightRange(heightNum)
 
+  const rank = rankForXp(xp)
+  const activityLabel = ACTIVITY_LEVELS.find((a) => a.value === profile?.activity_level)?.label
   const chartData = [...bodyStats].reverse().map((s) => ({ date: formatDateShort(s.recorded_at), weight: Number(s.weight_kg) }))
-  const avatarName = watch('name')
 
   return (
     <div className="min-h-screen bg-ink-950">
+      {modal}
       <PageHeader
         title="Mi perfil"
         back="/app/dashboard"
         right={
           <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-400 transition-colors">
             <LogOut size={16} />
-            Salir
+            Cerrar Sesión
           </button>
         }
       />
@@ -171,113 +143,60 @@ export default function Profile() {
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-6">
         {loading ? (
           <div className="animate-pulse space-y-4">
-            <div className="h-20 card" />
+            <div className="h-28 card" />
+            <div className="h-24 card" />
             <div className="h-64 card" />
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center shrink-0">
-                <span className="text-ink-950 text-2xl font-display font-bold">
-                  {avatarName ? avatarName[0].toUpperCase() : '?'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none">
-                  {avatarName || 'Sin nombre'}
-                </p>
-                <p className="text-sm text-zinc-500 mt-1">Edita tu perfil abajo</p>
-              </div>
-              <Link to="/app/friends" className="btn-dark px-3 py-2 text-xs shrink-0">
-                <Users size={15} />
-                Amigos
-              </Link>
-            </div>
-
-            <AchievementsPanel />
-
-            <form onSubmit={handleSubmit(onSubmit)} className="card p-5 space-y-4">
-              <h2 className="section-title">Datos personales</h2>
-
-              <div>
-                <label className="field-label">Nombre</label>
-                <input type="text" {...register('name')} className="input" placeholder="Tu nombre" />
-                {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="field-label">Fecha de nacimiento</label>
-                  <input type="date" {...register('birth_date')} className="input" />
+            {/* Cabecera */}
+            <div className="card p-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-accent flex items-center justify-center">
+                      <span className="text-ink-950 text-3xl font-display font-bold">
+                        {profile?.name ? profile.name[0].toUpperCase() : '?'}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="field-label">Género</label>
-                  <select {...register('gender')} className="input">
-                    <option value="">Sin especificar</option>
-                    {GENDERS.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                    {profile?.name || 'Sin nombre'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`chip ${rank.current.bg} ${rank.current.color}`}>{rank.current.name}</span>
+                    {activityLabel && <span className="chip-muted">{activityLabel}</span>}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="field-label">Altura (cm)</label>
-                  <input type="number" step="0.1" {...register('height_cm')} className="input" placeholder="175" />
-                  {errors.height_cm && <p className="text-xs text-red-400 mt-1">{errors.height_cm.message}</p>}
-                </div>
-                <div>
-                  <label className="field-label">Peso (kg)</label>
-                  <input type="number" step="0.1" {...register('weight_kg')} className="input" placeholder="70" />
-                  {errors.weight_kg && <p className="text-xs text-red-400 mt-1">{errors.weight_kg.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="field-label">Nivel de actividad</label>
-                  <select {...register('activity_level')} className="input">
-                    <option value="">Sin especificar</option>
-                    {ACTIVITY_LEVELS.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="field-label">Días de entreno / semana</label>
-                  <input type="number" min="0" max="7" {...register('training_days_per_week')} className="input" placeholder="4" />
-                  {errors.training_days_per_week
-                    ? <p className="text-xs text-red-400 mt-1">{errors.training_days_per_week.message}</p>
-                    : <p className="text-xs text-zinc-600 mt-1">Es tu meta para mantener la racha.</p>}
-                </div>
-              </div>
-
-              <div>
-                <label className="field-label">Objetivo</label>
-                <select {...register('goal')} className="input">
-                  <option value="">Sin objetivo</option>
-                  {Object.entries(GOAL_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </div>
-
-              {saveStatus && (
-                <p className={`text-sm px-3.5 py-2.5 rounded-xl border ${
-                  saveStatus.type === 'success'
-                    ? 'text-accent bg-accent/10 border-accent/25'
-                    : 'text-red-400 bg-red-500/10 border-red-500/20'
-                }`}>
-                  {saveStatus.msg}
-                </p>
+              {profile?.bio && (
+                <p className="text-sm text-zinc-400 leading-relaxed">{profile.bio}</p>
               )}
 
-              <button type="submit" disabled={isSubmitting} className="btn-accent w-full py-3 text-sm">
-                {isSubmitting ? 'Guardando…' : 'Guardar perfil'}
-              </button>
-            </form>
+              <div className="flex items-center gap-3">
+                <Link to="/app/friends" className="btn-dark flex-1 py-2.5 text-sm">
+                  <Users size={15} />
+                  {friendCount != null ? `${friendCount} amigos` : 'Amigos'}
+                </Link>
+                <Link to="/app/profile/edit" className="btn-accent flex-1 py-2.5 text-sm">
+                  <Pencil size={15} />
+                  Editar perfil
+                </Link>
+              </div>
+            </div>
 
+            {/* Rango — lleva a la vista de logros */}
+            <Link to="/app/profile/achievements" className="block">
+              <RankCard xp={xp} interactive />
+            </Link>
+
+            {/* Métricas */}
             {(bmiInfo || bmr || maxHR || weightRange) && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -348,6 +267,7 @@ export default function Profile() {
               </div>
             )}
 
+            {/* Registrar peso */}
             <div className="card p-5 space-y-4">
               <h2 className="section-title">Registrar peso</h2>
 
@@ -360,17 +280,9 @@ export default function Profile() {
               {statError && <p className="text-xs text-red-400">{statError}</p>}
 
               {chartData.length > 1 && (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#71717a' }} stroke="#2a2a31" />
-                    <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#71717a' }} width={36} stroke="#2a2a31" />
-                    <Tooltip
-                      contentStyle={{ background: '#17171b', border: '1px solid #2a2a31', borderRadius: 12, color: '#fafafa' }}
-                      labelStyle={{ color: '#a1a1aa' }}
-                    />
-                    <Line type="monotone" dataKey="weight" stroke="#a3e635" dot={false} strokeWidth={2.5} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<div className="h-[200px] card animate-pulse" />}>
+                  <ProgressChart data={chartData} dataKey="weight" height={200} />
+                </Suspense>
               )}
 
               {bodyStats.length > 0 ? (

@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 import { Dumbbell, Trophy, TrendingUp } from 'lucide-react'
-import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { useExercise, useExerciseVariations } from '../../hooks/useExercises'
 import { useExerciseHistory } from '../../hooks/useExerciseHistory'
 import ExerciseMedia from '../../components/features/ExerciseMedia'
 import PageHeader from '../../components/ui/PageHeader'
+const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 
 const METRICS = [
   { key: 'maxWeight', label: 'Peso máx', unit: 'kg' },
@@ -219,18 +219,17 @@ function ProgressSection({ exerciseId }) {
         </div>
 
         {history.length > 1 ? (
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={chartData} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#71717a' }} stroke="#2a2a31" />
-              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#71717a' }} width={40} stroke="#2a2a31" />
-              <Tooltip
-                contentStyle={{ background: '#17171b', border: '1px solid #2a2a31', borderRadius: 12, color: '#fafafa' }}
-                labelStyle={{ color: '#a1a1aa' }}
-                formatter={(value) => [`${value.toLocaleString('es')} ${active.unit}`, active.label]}
-              />
-              <Line type="monotone" dataKey="value" stroke="#a3e635" dot={{ r: 2, fill: '#a3e635' }} strokeWidth={2.5} />
-            </LineChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<div className="h-[220px] card animate-pulse" />}>
+            <ProgressChart
+              data={chartData}
+              dataKey="value"
+              height={220}
+              yWidth={40}
+              dot
+              margin={{ top: 6, right: 6, bottom: 0, left: 0 }}
+              tooltipFormatter={(value) => [`${value.toLocaleString('es')} ${active.unit}`, active.label]}
+            />
+          </Suspense>
         ) : (
           <p className="text-sm text-zinc-500 card px-5 py-6 text-center">
             Registra este ejercicio al menos dos veces para ver la curva de progresión.

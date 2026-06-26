@@ -18,11 +18,14 @@ const Start = lazy(() => import('./routes/app/workout/Start'))
 const Active = lazy(() => import('./routes/app/workout/Active'))
 const Summary = lazy(() => import('./routes/app/workout/Summary'))
 const Profile = lazy(() => import('./routes/app/Profile'))
+const ProfileEdit = lazy(() => import('./routes/app/ProfileEdit'))
+const Achievements = lazy(() => import('./routes/app/Achievements'))
 const Streak = lazy(() => import('./routes/app/Streak'))
 const History = lazy(() => import('./routes/app/History'))
 const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
 const Friends = lazy(() => import('./routes/app/Friends'))
 const PublicProfile = lazy(() => import('./routes/app/PublicProfile'))
+const Onboarding = lazy(() => import('./routes/app/Onboarding'))
 
 function page(node) {
   return <Suspense fallback={<Splash />}>{node}</Suspense>
@@ -50,9 +53,11 @@ function GuestOnly() {
 function RootRedirect() {
   const session = useAuthStore((s) => s.session)
   const ready = useAuthStore((s) => s.ready)
-  if (session) return <Navigate to="/app/dashboard" replace />
+  const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
   if (!ready) return <Splash />
-  return <Navigate to="/login" replace />
+  if (!session) return <Navigate to="/login" replace />
+  if (needsOnboarding) return <Navigate to="/app/onboarding" replace />
+  return <Navigate to="/app/dashboard" replace />
 }
 
 export const router = createBrowserRouter([
@@ -68,6 +73,7 @@ export const router = createBrowserRouter([
     path: '/app',
     element: <RequireAuth />,
     children: [
+      { path: 'onboarding', element: page(<Onboarding />) },
       {
         element: page(<AppLayout />),
         children: [
@@ -82,6 +88,8 @@ export const router = createBrowserRouter([
           { path: 'workout/active', element: <Active /> },
           { path: 'workout/summary/:sessionId', element: <Summary /> },
           { path: 'profile', element: <Profile /> },
+          { path: 'profile/edit', element: <ProfileEdit /> },
+          { path: 'profile/achievements', element: <Achievements /> },
           { path: 'streak', element: <Streak /> },
           { path: 'friends', element: <Friends /> },
           { path: 'u/:userId', element: <PublicProfile /> },
