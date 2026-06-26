@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogOut, Info, Users, Camera } from 'lucide-react'
+import { useConfirm } from '../../hooks/useConfirm'
 import { sileo } from 'sileo'
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { supabase } from '../../lib/supabase'
@@ -61,6 +62,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const { getProfile, updateProfile, uploadAvatar, addBodyStat, getBodyStats } = useProfile()
 
+  const { confirm, modal } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [infoOpen, setInfoOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
@@ -155,6 +157,13 @@ export default function Profile() {
   }
 
   async function handleLogout() {
+    const ok = await confirm({
+      title: '¿Cerrar sesión?',
+      description: 'Tendrás que volver a iniciar sesión para acceder a tu cuenta.',
+      confirmLabel: 'Cerrar sesión',
+      danger: true,
+    })
+    if (!ok) return
     await supabase.auth.signOut()
     navigate('/login')
   }
@@ -175,6 +184,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      {modal}
       <PageHeader
         title="Mi perfil"
         back="/app/dashboard"

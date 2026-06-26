@@ -4,6 +4,7 @@ import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, ChevronDown, La
 import { sileo } from 'sileo'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useProfile } from '../../hooks/useProfile'
+import { useConfirm } from '../../hooks/useConfirm'
 import { levelFromActivity, splitLabel, GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
 
@@ -96,6 +97,7 @@ export default function Routines() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [profile, setProfile] = useState(null)
+  const { confirm, modal } = useConfirm()
 
   useEffect(() => {
     async function load() {
@@ -152,10 +154,17 @@ export default function Routines() {
   }
 
   const handleDelete = async (routine) => {
-    if (!window.confirm(`¿Eliminar la rutina "${routine.name}"?`)) return
+    const ok = await confirm({
+      title: `¿Eliminar "${routine.name}"?`,
+      description: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteRoutine(routine.id)
       setUserRoutines((prev) => prev.filter((r) => r.id !== routine.id))
+      sileo.success({ title: 'Rutina eliminada.' })
     } catch (err) {
       sileo.error({ title: 'Error al eliminar', description: err.message })
     }
@@ -163,6 +172,7 @@ export default function Routines() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      {modal}
       <PageHeader
         title="Rutinas"
         back="/app/dashboard"
