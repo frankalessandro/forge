@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check, MailCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
+import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { AuthShell } from './Login'
 
 const credentialsSchema = z
@@ -27,15 +28,24 @@ const GOALS = [
   { value: 'health', label: 'Salud general', icon: Heart },
 ]
 
-const ONBOARDING_STEPS = 4
+const ONBOARDING_STEPS = 5
 
 export default function Register() {
   const navigate = useNavigate()
   const { updateProfile, addBodyStat } = useProfile()
 
-  // step 0 = credenciales · 1..4 = entrevista · 'confirm' = requiere verificar email
+  // step 0 = credenciales · 1..5 = entrevista · 'confirm' = requiere verificar email
   const [step, setStep] = useState(0)
-  const [profile, setProfile] = useState({ name: '', birth_date: '', height_cm: '', weight_kg: '', goal: '' })
+  const [profile, setProfile] = useState({
+    name: '',
+    birth_date: '',
+    gender: '',
+    height_cm: '',
+    weight_kg: '',
+    activity_level: '',
+    training_days_per_week: '',
+    goal: '',
+  })
   const [saving, setSaving] = useState(false)
 
   const set = (patch) => setProfile((p) => ({ ...p, ...patch }))
@@ -65,8 +75,11 @@ export default function Register() {
     const payload = {}
     if (profile.name.trim()) payload.name = profile.name.trim()
     if (profile.birth_date) payload.birth_date = profile.birth_date
+    if (profile.gender) payload.gender = profile.gender
     if (profile.height_cm) payload.height_cm = Number(profile.height_cm)
     if (profile.weight_kg) payload.weight_kg = Number(profile.weight_kg)
+    if (profile.activity_level) payload.activity_level = profile.activity_level
+    if (profile.training_days_per_week !== '') payload.training_days_per_week = Number(profile.training_days_per_week)
     if (profile.goal) payload.goal = profile.goal
 
     if (Object.keys(payload).length) await updateProfile(payload)
@@ -148,7 +161,7 @@ export default function Register() {
 
         {step === 1 && (
           <Step
-            eyebrow="Paso 1 de 4"
+            eyebrow="Paso 1 de 5"
             title="¿Cómo te llamás?"
             subtitle="Así personalizamos tu experiencia."
           >
@@ -165,18 +178,39 @@ export default function Register() {
         )}
 
         {step === 2 && (
-          <Step eyebrow="Paso 2 de 4" title="¿Cuándo naciste?" subtitle="Opcional. Nos ayuda con tus métricas.">
-            <input
-              type="date"
-              value={profile.birth_date}
-              onChange={(e) => set({ birth_date: e.target.value })}
-              className="input text-center text-lg py-3"
-            />
+          <Step eyebrow="Paso 2 de 5" title="Sobre vos" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
+            <label className="block mb-4">
+              <span className="field-label">Fecha de nacimiento</span>
+              <input
+                type="date"
+                value={profile.birth_date}
+                onChange={(e) => set({ birth_date: e.target.value })}
+                className="input text-center text-lg py-3"
+              />
+            </label>
+            <span className="field-label">Género</span>
+            <div className="grid grid-cols-2 gap-3">
+              {GENDERS.map(({ value, label }) => {
+                const active = profile.gender === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => set({ gender: value })}
+                    className={`rounded-2xl px-4 py-3 border transition-colors display text-sm ${
+                      active ? 'bg-accent/10 border-accent/50 text-accent' : 'bg-ink-850 border-ink-700 hover:border-ink-600 text-zinc-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
           </Step>
         )}
 
         {step === 3 && (
-          <Step eyebrow="Paso 3 de 4" title="Tus medidas" subtitle="En kg y cm. Lo usamos para tu IMC y progreso.">
+          <Step eyebrow="Paso 3 de 5" title="Tus medidas" subtitle="En kg y cm. Lo usamos para tu IMC y progreso.">
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="field-label">Altura (cm)</span>
@@ -206,7 +240,45 @@ export default function Register() {
         )}
 
         {step === 4 && (
-          <Step eyebrow="Paso 4 de 4" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
+          <Step eyebrow="Paso 4 de 5" title="¿Qué tan activo sos?" subtitle="Tu nivel de actividad y cuántos días entrenás.">
+            <div className="space-y-2.5">
+              {ACTIVITY_LEVELS.map(({ value, label, desc }) => {
+                const active = profile.activity_level === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => set({ activity_level: value })}
+                    className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 border transition-colors text-left ${
+                      active ? 'bg-accent/10 border-accent/50' : 'bg-ink-850 border-ink-700 hover:border-ink-600'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <span className={`display text-sm ${active ? 'text-accent' : 'text-zinc-200'}`}>{label}</span>
+                      <span className="block text-xs text-zinc-500">{desc}</span>
+                    </div>
+                    {active && <Check size={18} className="text-accent shrink-0" strokeWidth={3} />}
+                  </button>
+                )
+              })}
+            </div>
+            <label className="block mt-4">
+              <span className="field-label">Días de entreno por semana</span>
+              <input
+                type="number"
+                min="0"
+                max="7"
+                value={profile.training_days_per_week}
+                onChange={(e) => set({ training_days_per_week: e.target.value })}
+                className="input text-center text-lg py-3"
+                placeholder="4"
+              />
+            </label>
+          </Step>
+        )}
+
+        {step === 5 && (
+          <Step eyebrow="Paso 5 de 5" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
             <div className="space-y-2.5">
               {GOALS.map(({ value, label, icon: Icon }) => {
                 const active = profile.goal === value
