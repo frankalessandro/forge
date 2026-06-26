@@ -1,27 +1,13 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check, MailCheck } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check } from 'lucide-react'
 import { sileo } from 'sileo'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
 import { useProfile } from '../../hooks/useProfile'
 import { useRoutines } from '../../hooks/useRoutines'
 import { levelFromActivity } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
-import { AuthShell, OAuthButton, Divider } from './Login'
-
-const credentialsSchema = z
-  .object({
-    email: z.string().email('Ingresa un email válido'),
-    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: 'Las contraseñas no coinciden',
-    path: ['confirmPassword'],
-  })
+import { AuthShell } from '../auth/Login'
 
 const GOALS = [
   { value: 'gain_muscle', label: 'Ganar músculo', icon: Dumbbell },
@@ -31,17 +17,22 @@ const GOALS = [
   { value: 'health', label: 'Salud general', icon: Heart },
 ]
 
-const ONBOARDING_STEPS = 6
+const STEPS = 6
 const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
 
-export default function Register() {
+export default function Onboarding() {
   const navigate = useNavigate()
-  const { updateProfile, addBodyStat } = useProfile()
+  const user = useAuthStore((s) => s.user)
+  const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
+  const completeOnboarding = useAuthStore((s) => s.completeOnboarding)
+  const { updateProfile } = useProfile()
   const { generateForGoal } = useRoutines()
 
-  const [step, setStep] = useState(0)
-  const [profile, setProfile] = useState({
-    name: '',
+  const meta = user?.user_metadata ?? {}
+
+  const [step, setStep] = useState(1)
+  const [data, setData] = useState({
+    name: meta.full_name ?? meta.name ?? '',
     birth_date: '',
     gender: '',
     height_cm: '',
@@ -51,151 +42,62 @@ export default function Register() {
     goal: '',
   })
   const [saving, setSaving] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState(null)
 
-  const set = (patch) => setProfile((p) => ({ ...p, ...patch }))
+  // Si ya completó el onboarding en otra pestaña o volvió atrás, mandar al dashboard
+  useEffect(() => {
+    if (!needsOnboarding) navigate('/app/dashboard', { replace: true })
+  }, [needsOnboarding, navigate])
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(credentialsSchema) })
-
-  const onCreateAccount = async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      sileo.error({ title: 'Error al crear cuenta', description: 'Probá con otro email.' })
-      setError('root', { message: 'No se pudo crear la cuenta. Prueba con otro email.' })
-      return
-    }
-    if (data.session) {
-      sileo.success({ title: 'Cuenta creada', description: 'Completá tu perfil para empezar.' })
-      setStep(1)
-    } else {
-      setStep('confirm')
-    }
-  }
-
-  const handleOAuth = async (provider) => {
-    setOauthLoading(provider)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) {
-      sileo.error({ title: 'Error al conectar', description: error.message })
-      setOauthLoading(null)
-    }
-  }
+  const patch = (update) => setData((d) => ({ ...d, ...update }))
 
   const finish = async () => {
     setSaving(true)
     const payload = {}
-    if (profile.name.trim()) payload.name = profile.name.trim()
-    if (profile.birth_date) payload.birth_date = profile.birth_date
-    if (profile.gender) payload.gender = profile.gender
-    if (profile.height_cm) payload.height_cm = Number(profile.height_cm)
-    if (profile.weight_kg) payload.weight_kg = Number(profile.weight_kg)
-    if (profile.activity_level) payload.activity_level = profile.activity_level
-    if (profile.training_days_per_week !== '') payload.training_days_per_week = Number(profile.training_days_per_week)
-    if (profile.goal) payload.goal = profile.goal
+    if (data.name.trim()) payload.name = data.name.trim()
+    if (data.birth_date) payload.birth_date = data.birth_date
+    if (data.gender) payload.gender = data.gender
+    if (data.height_cm) payload.height_cm = Number(data.height_cm)
+    if (data.weight_kg) payload.weight_kg = Number(data.weight_kg)
+    if (data.activity_level) payload.activity_level = data.activity_level
+    if (data.training_days_per_week !== '') payload.training_days_per_week = Number(data.training_days_per_week)
+    if (data.goal) payload.goal = data.goal
+    // Guarda la foto de Google en el perfil
+    if (meta.avatar_url) payload.avatar_url = meta.avatar_url
 
-    if (Object.keys(payload).length) await updateProfile(payload)
-    if (profile.weight_kg) await addBodyStat(Number(profile.weight_kg))
+    await updateProfile(payload)
 
-    if (profile.goal) {
+    if (data.goal) {
       try {
         await generateForGoal({
-          goal: profile.goal,
-          level: levelFromActivity(profile.activity_level),
-          daysPerWeek: profile.training_days_per_week !== '' ? Number(profile.training_days_per_week) : 3,
+          goal: data.goal,
+          level: levelFromActivity(data.activity_level),
+          daysPerWeek: data.training_days_per_week !== '' ? Number(data.training_days_per_week) : 3,
         })
       } catch {
-        // silencioso: la generación es un extra, no un requisito del registro
+        // silencioso
       }
     }
 
+    completeOnboarding()
     sileo.success({ title: '¡Todo listo! A entrenar.' })
     navigate('/app/dashboard', { replace: true })
   }
 
-  const next = () => setStep((s) => s + 1)
-  const back = () => setStep((s) => Math.max(1, s - 1))
-
-  if (step === 'confirm') {
-    return (
-      <AuthShell>
-        <div className="card p-7 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-accent/15 text-accent flex items-center justify-center mx-auto mb-4">
-            <MailCheck size={24} />
-          </div>
-          <h1 className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100">Revisa tu email</h1>
-          <p className="text-sm text-zinc-500 mt-2">
-            Te enviamos un enlace para confirmar tu cuenta. Después de confirmarla, inicia sesión.
-          </p>
-          <Link to="/login" className="btn-accent w-full py-3 text-sm mt-6 block text-center">Ir a iniciar sesión</Link>
-        </div>
-      </AuthShell>
-    )
-  }
-
-  if (step === 0) {
-    return (
-      <AuthShell>
-        <div className="card p-7">
-          <h1 className="font-display font-bold uppercase tracking-tight text-2xl text-zinc-100">Crear cuenta</h1>
-          <p className="text-sm text-zinc-500 mt-1 mb-6">Empieza a registrar tu progreso.</p>
-
-          <form onSubmit={handleSubmit(onCreateAccount)} className="space-y-4">
-            <div>
-              <label className="field-label">Email</label>
-              <input type="email" autoComplete="email" {...register('email')} className="input" placeholder="tu@email.com" />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
-            </div>
-            <div>
-              <label className="field-label">Contraseña</label>
-              <input type="password" autoComplete="new-password" {...register('password')} className="input" placeholder="••••••••" />
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
-            </div>
-            <div>
-              <label className="field-label">Confirmar contraseña</label>
-              <input type="password" autoComplete="new-password" {...register('confirmPassword')} className="input" placeholder="••••••••" />
-              {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword.message}</p>}
-            </div>
-
-            {errors.root && (
-              <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">
-                {errors.root.message}
-              </p>
-            )}
-
-            <button type="submit" disabled={isSubmitting || oauthLoading !== null} className="btn-accent w-full py-3 text-sm">
-              {isSubmitting ? 'Creando cuenta…' : 'Continuar'}
-            </button>
-          </form>
-
-          <Divider />
-
-          <OAuthButton
-            provider="google"
-            label="Registrarse con Google"
-            loading={oauthLoading === 'google'}
-            disabled={isSubmitting || oauthLoading !== null}
-            onClick={() => handleOAuth('google')}
-          />
-        </div>
-
-        <p className="text-sm text-zinc-500 text-center mt-5">
-          ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">Inicia sesión</Link>
-        </p>
-      </AuthShell>
-    )
-  }
+  const next = () => setStep((s) => Math.min(s + 1, STEPS))
+  const back = () => setStep((s) => Math.max(s - 1, 1))
 
   return (
     <AuthShell>
+      {meta.avatar_url && (
+        <div className="flex justify-center mb-6 -mt-2">
+          <img
+            src={meta.avatar_url}
+            alt="Tu foto"
+            className="w-20 h-20 rounded-2xl object-cover border-2 border-accent/30"
+          />
+        </div>
+      )}
+
       <div className="card p-7">
         <Progress step={step} />
 
@@ -204,8 +106,8 @@ export default function Register() {
             <input
               autoFocus
               type="text"
-              value={profile.name}
-              onChange={(e) => set({ name: e.target.value })}
+              value={data.name}
+              onChange={(e) => patch({ name: e.target.value })}
               onKeyDown={(e) => e.key === 'Enter' && next()}
               className="input text-center text-lg py-3"
               placeholder="Tu nombre"
@@ -219,20 +121,20 @@ export default function Register() {
               <span className="field-label">Fecha de nacimiento</span>
               <input
                 type="date"
-                value={profile.birth_date}
-                onChange={(e) => set({ birth_date: e.target.value })}
+                value={data.birth_date}
+                onChange={(e) => patch({ birth_date: e.target.value })}
                 className="input text-center text-lg py-3"
               />
             </label>
             <span className="field-label">Género</span>
             <div className="grid grid-cols-2 gap-3">
               {GENDERS.map(({ value, label }) => {
-                const active = profile.gender === value
+                const active = data.gender === value
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => set({ gender: value })}
+                    onClick={() => patch({ gender: value })}
                     className={`rounded-2xl px-4 py-3 border transition-colors display text-sm ${
                       active ? 'bg-accent/10 border-accent/50 text-accent' : 'bg-ink-850 border-ink-700 hover:border-ink-600 text-zinc-200'
                     }`}
@@ -254,8 +156,8 @@ export default function Register() {
                   autoFocus
                   type="number"
                   step="0.1"
-                  value={profile.height_cm}
-                  onChange={(e) => set({ height_cm: e.target.value })}
+                  value={data.height_cm}
+                  onChange={(e) => patch({ height_cm: e.target.value })}
                   className="input text-center text-lg py-3"
                   placeholder="175"
                 />
@@ -265,8 +167,8 @@ export default function Register() {
                 <input
                   type="number"
                   step="0.1"
-                  value={profile.weight_kg}
-                  onChange={(e) => set({ weight_kg: e.target.value })}
+                  value={data.weight_kg}
+                  onChange={(e) => patch({ weight_kg: e.target.value })}
                   className="input text-center text-lg py-3"
                   placeholder="70"
                 />
@@ -279,12 +181,12 @@ export default function Register() {
           <Step eyebrow="Paso 4 de 6" title="¿Qué tan activo eres?" subtitle="Lo usamos para calibrar tus rutinas.">
             <div className="space-y-2.5">
               {ACTIVITY_LEVELS.map(({ value, label, desc }) => {
-                const active = profile.activity_level === value
+                const active = data.activity_level === value
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => set({ activity_level: value })}
+                    onClick={() => patch({ activity_level: value })}
                     className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 border transition-colors text-left ${
                       active ? 'bg-accent/10 border-accent/50' : 'bg-ink-850 border-ink-700 hover:border-ink-600'
                     }`}
@@ -309,12 +211,12 @@ export default function Register() {
           >
             <div className="grid grid-cols-3 gap-3">
               {TRAINING_DAYS.map((n) => {
-                const active = Number(profile.training_days_per_week) === n
+                const active = Number(data.training_days_per_week) === n
                 return (
                   <button
                     key={n}
                     type="button"
-                    onClick={() => set({ training_days_per_week: String(n) })}
+                    onClick={() => patch({ training_days_per_week: String(n) })}
                     className={`flex flex-col items-center gap-1 rounded-2xl px-4 py-4 border transition-colors ${
                       active ? 'bg-accent/10 border-accent/50 text-accent' : 'bg-ink-850 border-ink-700 hover:border-ink-600 text-zinc-200'
                     }`}
@@ -336,12 +238,12 @@ export default function Register() {
           <Step eyebrow="Paso 6 de 6" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
             <div className="space-y-2.5">
               {GOALS.map(({ value, label, icon: Icon }) => {
-                const active = profile.goal === value
+                const active = data.goal === value
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => set({ goal: value })}
+                    onClick={() => patch({ goal: value })}
                     className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 border transition-colors text-left ${
                       active ? 'bg-accent/10 border-accent/50' : 'bg-ink-850 border-ink-700 hover:border-ink-600'
                     }`}
@@ -364,7 +266,7 @@ export default function Register() {
               <ArrowLeft size={16} />
             </button>
           )}
-          {step < ONBOARDING_STEPS ? (
+          {step < STEPS ? (
             <button onClick={next} className="btn-accent flex-1 py-3 text-sm" type="button">
               Continuar
               <ArrowRight size={16} />
@@ -392,7 +294,7 @@ export default function Register() {
 function Progress({ step }) {
   return (
     <div className="flex gap-1.5 mb-6">
-      {Array.from({ length: ONBOARDING_STEPS }).map((_, i) => (
+      {Array.from({ length: STEPS }).map((_, i) => (
         <div
           key={i}
           className={`h-1 flex-1 rounded-full transition-colors ${i < step ? 'bg-accent' : 'bg-ink-700'}`}

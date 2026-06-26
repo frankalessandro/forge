@@ -22,6 +22,19 @@ export function useProfile() {
       .single()
   }
 
+  async function uploadAvatar(file) {
+    const userId = useAuthStore.getState().user?.id
+    if (!userId) return { data: null, error: new Error('Not authenticated') }
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/avatar.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) return { data: null, error: uploadError }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    return updateProfile({ avatar_url: `${publicUrl}?t=${Date.now()}` })
+  }
+
   async function addBodyStat(weight_kg, recorded_at) {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
@@ -41,5 +54,5 @@ export function useProfile() {
       .limit(30)
   }
 
-  return { getProfile, updateProfile, addBodyStat, getBodyStats }
+  return { getProfile, updateProfile, uploadAvatar, addBodyStat, getBodyStats }
 }

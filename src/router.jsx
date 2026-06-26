@@ -23,6 +23,7 @@ const History = lazy(() => import('./routes/app/History'))
 const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
 const Friends = lazy(() => import('./routes/app/Friends'))
 const PublicProfile = lazy(() => import('./routes/app/PublicProfile'))
+const Onboarding = lazy(() => import('./routes/app/Onboarding'))
 
 function page(node) {
   return <Suspense fallback={<Splash />}>{node}</Suspense>
@@ -50,9 +51,11 @@ function GuestOnly() {
 function RootRedirect() {
   const session = useAuthStore((s) => s.session)
   const ready = useAuthStore((s) => s.ready)
-  if (session) return <Navigate to="/app/dashboard" replace />
+  const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
   if (!ready) return <Splash />
-  return <Navigate to="/login" replace />
+  if (!session) return <Navigate to="/login" replace />
+  if (needsOnboarding) return <Navigate to="/app/onboarding" replace />
+  return <Navigate to="/app/dashboard" replace />
 }
 
 export const router = createBrowserRouter([
@@ -68,6 +71,7 @@ export const router = createBrowserRouter([
     path: '/app',
     element: <RequireAuth />,
     children: [
+      { path: 'onboarding', element: page(<Onboarding />) },
       {
         element: page(<AppLayout />),
         children: [

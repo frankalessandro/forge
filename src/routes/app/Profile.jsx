@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { LogOut, Info, Users } from 'lucide-react'
+import { LogOut, Info, Users, Camera } from 'lucide-react'
 import { sileo } from 'sileo'
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { supabase } from '../../lib/supabase'
@@ -59,14 +59,17 @@ function todayISO() {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { getProfile, updateProfile, addBodyStat, getBodyStats } = useProfile()
+  const { getProfile, updateProfile, uploadAvatar, addBodyStat, getBodyStats } = useProfile()
 
   const [loading, setLoading] = useState(true)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [bodyStats, setBodyStats] = useState([])
   const [statWeight, setStatWeight] = useState('')
   const [statDate, setStatDate] = useState(todayISO())
   const [statError, setStatError] = useState(null)
+  const avatarInputRef = useRef(null)
 
   const {
     register,
@@ -95,6 +98,7 @@ export default function Profile() {
           training_days_per_week: data.training_days_per_week ?? '',
           goal: data.goal ?? '',
         })
+        setAvatarUrl(data.avatar_url ?? null)
       }
       setLoading(false)
     }
@@ -121,6 +125,21 @@ export default function Profile() {
     const { error } = await updateProfile(clean)
     if (error) sileo.error({ title: 'Error al guardar', description: error.message })
     else sileo.success({ title: 'Perfil guardado correctamente.' })
+  }
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    const { data, error } = await uploadAvatar(file)
+    if (error) {
+      sileo.error({ title: 'Error al subir la foto', description: error.message })
+    } else {
+      setAvatarUrl(data?.avatar_url ?? avatarUrl)
+      sileo.success({ title: 'Foto actualizada.' })
+    }
+    setUploadingAvatar(false)
+    e.target.value = ''
   }
 
   async function handleAddStat(e) {
@@ -176,16 +195,41 @@ export default function Profile() {
         ) : (
           <>
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center shrink-0">
-                <span className="text-ink-950 text-2xl font-display font-bold">
-                  {avatarName ? avatarName[0].toUpperCase() : '?'}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="relative w-16 h-16 rounded-2xl shrink-0 group overflow-hidden"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-accent flex items-center justify-center">
+                    <span className="text-ink-950 text-2xl font-display font-bold">
+                      {avatarName ? avatarName[0].toUpperCase() : '?'}
+                    </span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {uploadingAvatar
+                    ? <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    : <Camera size={18} className="text-white" />
+                  }
+                </div>
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+
               <div className="flex-1 min-w-0">
                 <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none">
                   {avatarName || 'Sin nombre'}
                 </p>
-                <p className="text-sm text-zinc-500 mt-1">Edita tu perfil abajo</p>
+                <p className="text-sm text-zinc-500 mt-1">Toca la foto para cambiarla</p>
               </div>
               <Link to="/app/friends" className="btn-dark px-3 py-2 text-xs shrink-0">
                 <Users size={15} />
