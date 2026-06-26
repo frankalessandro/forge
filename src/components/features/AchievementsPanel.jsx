@@ -16,7 +16,7 @@ function RankCard({ xp }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="stat-num text-2xl text-zinc-100">{xp.toLocaleString('es-AR')}</p>
+          <p className="stat-num text-2xl text-zinc-100">{xp.toLocaleString('es')}</p>
           <p className="eyebrow text-zinc-500">XP</p>
         </div>
       </div>
@@ -25,7 +25,7 @@ function RankCard({ xp }) {
           <div className="h-full bg-current rounded-full transition-all" style={{ width: `${progress * 100}%`, color: 'inherit' }} />
         </div>
         <p className="text-xs text-zinc-500 mt-1.5">
-          {next ? `${(next.min - xp).toLocaleString('es-AR')} XP para ${next.name}` : 'Rango máximo alcanzado'}
+          {next ? `${(next.min - xp).toLocaleString('es')} XP para ${next.name}` : 'Rango máximo alcanzado'}
         </p>
       </div>
     </div>

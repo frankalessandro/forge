@@ -242,7 +242,7 @@ function StatsBar({ exercises, elapsed }) {
           <p className="eyebrow mt-0.5">series</p>
         </div>
         <div>
-          <p className="stat-num text-xl text-zinc-100">{volume > 0 ? volume.toLocaleString('es-AR') : '—'}</p>
+          <p className="stat-num text-xl text-zinc-100">{volume > 0 ? volume.toLocaleString('es') : '—'}</p>
           <p className="eyebrow mt-0.5">kg vol</p>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function Active() {
         {exercises.length === 0 && (
           <div className="text-center py-16 text-zinc-500">
             <Dumbbell size={40} className="mx-auto mb-3 text-zinc-700" />
-            <p className="display text-sm text-zinc-400">Sin ejercicios todavía</p>
+            <p className="display text-sm text-zinc-400">Aún sin ejercicios</p>
             <p className="text-sm mt-1 text-zinc-600">Toca "Agregar ejercicio" para comenzar</p>
           </div>
         )}

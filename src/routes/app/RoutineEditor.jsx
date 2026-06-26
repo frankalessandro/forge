@@ -209,7 +209,7 @@ export default function RoutineEditor() {
 
               {items.length === 0 ? (
                 <div className="card border-dashed px-6 py-8 text-center">
-                  <p className="text-sm text-zinc-500">Todavía no agregaste ejercicios</p>
+                  <p className="text-sm text-zinc-500">Aún no has agregado ejercicios</p>
                 </div>
               ) : (
                 items.map((item, i) => (

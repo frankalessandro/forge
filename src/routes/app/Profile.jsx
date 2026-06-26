@@ -383,7 +383,7 @@ export default function Profile() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-zinc-500">No hay registros de peso todavía.</p>
+                <p className="text-sm text-zinc-500">Aún no hay registros de peso.</p>
               )}
             </div>
           </>

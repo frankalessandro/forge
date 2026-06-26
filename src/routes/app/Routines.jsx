@@ -215,7 +215,7 @@ export default function Routines() {
               className="block card border-dashed px-6 py-10 text-center card-hover"
             >
               <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
-              <p className="display text-sm text-zinc-300">Todavía no tienes rutinas propias</p>
+              <p className="display text-sm text-zinc-300">Aún no tienes rutinas propias</p>
               <p className="text-sm text-accent mt-1">Crea tu primera rutina</p>
             </Link>
           ) : (
