@@ -23,7 +23,23 @@ export function useRoutines() {
       .from('routines')
       .select('id, name, description, category, routine_exercises(count)')
       .eq('user_id', userId)
+      .eq('is_generated', false)
       .order('created_at', { ascending: false })
+    if (error) throw error
+    return data.map((r) => ({
+      ...r,
+      exerciseCount: r.routine_exercises?.[0]?.count ?? 0,
+    }))
+  }, [])
+
+  const getGeneratedRoutines = useCallback(async () => {
+    const userId = getCurrentUserId()
+    const { data, error } = await supabase
+      .from('routines')
+      .select('id, name, description, category, routine_exercises(count)')
+      .eq('user_id', userId)
+      .eq('is_generated', true)
+      .order('created_at', { ascending: true })
     if (error) throw error
     return data.map((r) => ({
       ...r,
@@ -115,6 +131,14 @@ export function useRoutines() {
   const generateForGoal = useCallback(async ({ goal, level, daysPerWeek }) => {
     const userId = getCurrentUserId()
 
+    // Borra las rutinas generadas anteriores (routine_exercises se borra en cascade)
+    const { error: delError } = await supabase
+      .from('routines')
+      .delete()
+      .eq('user_id', userId)
+      .eq('is_generated', true)
+    if (delError) throw delError
+
     const { data: exercises, error: exError } = await supabase
       .from('exercises')
       .select('id, name, equipment, primary_muscles, muscle_groups(name)')
@@ -135,6 +159,7 @@ export function useRoutines() {
           description: routine.description ?? null,
           category: routine.category ?? null,
           is_public: false,
+          is_generated: true,
         })
         .select('id')
         .single()
@@ -159,6 +184,7 @@ export function useRoutines() {
   return {
     getPublicRoutines,
     getUserRoutines,
+    getGeneratedRoutines,
     getRoutineDetail,
     createRoutine,
     updateRoutine,
