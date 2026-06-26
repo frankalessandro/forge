@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles } from 'lucide-react'
+import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, ChevronDown, LayoutList, BookOpen } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useProfile } from '../../hooks/useProfile'
@@ -47,14 +47,37 @@ function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
       </button>
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-accent transition-colors" title="Editar">
+        <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-accent transition-colors">
           <Pencil size={16} />
         </button>
-        <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Eliminar">
+        <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 transition-colors">
           <Trash2 size={16} />
         </button>
       </div>
     </div>
+  )
+}
+
+function Accordion({ icon: Icon, title, count, defaultOpen = true, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 mb-3 group"
+      >
+        <Icon size={15} className="text-zinc-500 shrink-0" />
+        <h2 className="section-title flex-1 text-left">{title}</h2>
+        {count !== undefined && (
+          <span className="chip bg-ink-800 text-zinc-500 text-xs">{count}</span>
+        )}
+        <ChevronDown
+          size={16}
+          className={`text-zinc-500 transition-transform duration-200 ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+      {open && <div className="space-y-3">{children}</div>}
+    </section>
   )
 }
 
@@ -64,25 +87,28 @@ function SkeletonCard() {
 
 export default function Routines() {
   const navigate = useNavigate()
-  const { getPublicRoutines, getUserRoutines, deleteRoutine, generateForGoal } = useRoutines()
+  const { getPublicRoutines, getUserRoutines, getGeneratedRoutines, deleteRoutine, generateForGoal } = useRoutines()
   const { getProfile } = useProfile()
+
   const [publicRoutines, setPublicRoutines] = useState([])
   const [userRoutines, setUserRoutines] = useState([])
+  const [generatedRoutines, setGeneratedRoutines] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [generating, setGenerating] = useState(false)
   const [profile, setProfile] = useState(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const [pub, user, { data: prof }] = await Promise.all([
+        const [pub, user, gen, { data: prof }] = await Promise.all([
           getPublicRoutines(),
           getUserRoutines(),
+          getGeneratedRoutines(),
           getProfile(),
         ])
         setPublicRoutines(pub)
         setUserRoutines(user)
+        setGeneratedRoutines(gen)
         setProfile(prof)
       } catch (err) {
         setError(err.message)
@@ -91,31 +117,38 @@ export default function Routines() {
       }
     }
     load()
-  }, [getPublicRoutines, getUserRoutines, getProfile])
+  }, [getPublicRoutines, getUserRoutines, getGeneratedRoutines, getProfile])
 
-  const handleGenerate = async () => {
-    setGenerating(true)
-    try {
-      const { data: profile } = await getProfile()
-      if (!profile?.goal) {
-        sileo.error({ title: 'Primero define tu objetivo en tu perfil.' })
-        return
-      }
-      const created = await generateForGoal({
-        goal: profile.goal,
-        level: levelFromActivity(profile.activity_level),
-        daysPerWeek: profile.training_days_per_week || 3,
-      })
-      const fresh = await getUserRoutines()
-      setUserRoutines(fresh)
-      sileo.success({
-        title: `Se ${created.length === 1 ? 'generó 1 rutina' : `generaron ${created.length} rutinas`} según tu objetivo.`,
-      })
-    } catch (err) {
-      sileo.error({ title: 'Error al generar rutinas', description: err.message })
-    } finally {
-      setGenerating(false)
+  const handleGenerate = () => {
+    if (!profile?.goal) {
+      sileo.error({ title: 'Primero define tu objetivo en tu perfil.' })
+      return
     }
+
+    const promise = generateForGoal({
+      goal: profile.goal,
+      level: levelFromActivity(profile.activity_level),
+      daysPerWeek: profile.training_days_per_week || 3,
+    }).then(async (created) => {
+      const fresh = await getGeneratedRoutines()
+      setGeneratedRoutines(fresh)
+      return created
+    })
+
+    sileo.promise(promise, {
+      loading: {
+        title: 'Generando rutinas…',
+        description: `${GOAL_LABELS[profile.goal]} · ${splitLabel(profile.training_days_per_week || 3)}`,
+      },
+      success: (created) => ({
+        title: `${created.length} rutinas listas`,
+        description: 'Reemplazaron las anteriores generadas.',
+      }),
+      error: (err) => ({
+        title: 'Error al generar',
+        description: err.message,
+      }),
+    })
   }
 
   const handleDelete = async (routine) => {
@@ -124,7 +157,7 @@ export default function Routines() {
       await deleteRoutine(routine.id)
       setUserRoutines((prev) => prev.filter((r) => r.id !== routine.id))
     } catch (err) {
-      setError(err.message)
+      sileo.error({ title: 'Error al eliminar', description: err.message })
     }
   }
 
@@ -148,7 +181,7 @@ export default function Routines() {
 
         {/* Generación por objetivo */}
         <section className="card p-5">
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-4 mb-4">
             <div className="rounded-xl bg-accent/15 text-accent p-3 shrink-0">
               <Sparkles size={20} />
             </div>
@@ -156,9 +189,9 @@ export default function Routines() {
               <h2 className="display text-sm text-zinc-100">Genera tu rutina</h2>
               {profile?.goal ? (
                 <p className="text-sm text-zinc-500 mt-0.5">
-                  Según tu objetivo (<span className="text-accent">{GOAL_LABELS[profile.goal]}</span>) y{' '}
-                  {profile.training_days_per_week || 3} días/semana ·{' '}
-                  {splitLabel(profile.training_days_per_week || 3)}.
+                  <span className="text-accent">{GOAL_LABELS[profile.goal]}</span>
+                  {' · '}{profile.training_days_per_week || 3} días/semana
+                  {' · '}{splitLabel(profile.training_days_per_week || 3)}
                 </p>
               ) : (
                 <p className="text-sm text-zinc-500 mt-0.5">
@@ -169,55 +202,93 @@ export default function Routines() {
               )}
             </div>
           </div>
-
           <button
             onClick={handleGenerate}
-            disabled={generating || !profile?.goal}
-            className="btn-accent w-full py-3 text-sm mt-4 disabled:opacity-40"
+            disabled={!profile?.goal}
+            className="btn-accent w-full py-3 text-sm disabled:opacity-40"
           >
             <Sparkles size={16} />
-            {generating ? 'Generando…' : 'Generar rutina según mi objetivo'}
+            {generatedRoutines.length > 0 ? 'Regenerar según mi objetivo' : 'Generar según mi objetivo'}
           </button>
+          {generatedRoutines.length > 0 && (
+            <p className="text-xs text-zinc-600 text-center mt-2">
+              Esto reemplazará las {generatedRoutines.length} rutinas generadas anteriores
+            </p>
+          )}
         </section>
 
-        <section>
-          <h2 className="section-title mb-3">Predeterminadas</h2>
-          <div className="space-y-3">
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-              : publicRoutines.map((r) => (
-                  <RoutineCard key={r.id} routine={r} onOpen={() => navigate(`/app/routines/${r.id}`)} />
-                ))}
-          </div>
-        </section>
+        {/* Sección: Según tu objetivo */}
+        <Accordion
+          icon={Sparkles}
+          title="Según tu objetivo"
+          count={loading ? undefined : generatedRoutines.length}
+          defaultOpen={generatedRoutines.length > 0}
+        >
+          {loading ? (
+            <SkeletonCard />
+          ) : generatedRoutines.length === 0 ? (
+            <div className="card border-dashed px-6 py-8 text-center">
+              <Sparkles size={28} className="mx-auto text-zinc-700 mb-2" />
+              <p className="text-sm text-zinc-500">Todavía no generaste ninguna rutina</p>
+              <p className="text-xs text-zinc-600 mt-1">Usá el botón de arriba para crear una a tu medida</p>
+            </div>
+          ) : (
+            generatedRoutines.map((r) => (
+              <UserRoutineCard
+                key={r.id}
+                routine={r}
+                onOpen={() => navigate(`/app/routines/${r.id}`)}
+                onEdit={() => navigate(`/app/routines/${r.id}/edit`)}
+                onDelete={() => handleDelete(r)}
+              />
+            ))
+          )}
+        </Accordion>
 
-        <section>
-          <h2 className="section-title mb-3">Mis rutinas</h2>
+        {/* Sección: Predeterminadas */}
+        <Accordion
+          icon={BookOpen}
+          title="Predeterminadas"
+          count={loading ? undefined : publicRoutines.length}
+          defaultOpen={false}
+        >
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+            : publicRoutines.map((r) => (
+                <RoutineCard key={r.id} routine={r} onOpen={() => navigate(`/app/routines/${r.id}`)} />
+              ))}
+        </Accordion>
+
+        {/* Sección: Mis rutinas */}
+        <Accordion
+          icon={LayoutList}
+          title="Mis rutinas"
+          count={loading ? undefined : userRoutines.length}
+          defaultOpen
+        >
           {loading ? (
             <SkeletonCard />
           ) : userRoutines.length === 0 ? (
             <Link
               to="/app/routines/new"
-              className="block card border-dashed px-6 py-10 text-center card-hover"
+              className="block card border-dashed px-6 py-8 text-center card-hover"
             >
-              <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
-              <p className="display text-sm text-zinc-300">Aún no tienes rutinas propias</p>
-              <p className="text-sm text-accent mt-1">Crea tu primera rutina</p>
+              <Dumbbell size={28} className="mx-auto text-zinc-700 mb-2" />
+              <p className="text-sm text-zinc-400">Todavía no tenés rutinas propias</p>
+              <p className="text-sm text-accent mt-1">Crear mi primera rutina</p>
             </Link>
           ) : (
-            <div className="space-y-3">
-              {userRoutines.map((r) => (
-                <UserRoutineCard
-                  key={r.id}
-                  routine={r}
-                  onOpen={() => navigate(`/app/routines/${r.id}`)}
-                  onEdit={() => navigate(`/app/routines/${r.id}/edit`)}
-                  onDelete={() => handleDelete(r)}
-                />
-              ))}
-            </div>
+            userRoutines.map((r) => (
+              <UserRoutineCard
+                key={r.id}
+                routine={r}
+                onOpen={() => navigate(`/app/routines/${r.id}`)}
+                onEdit={() => navigate(`/app/routines/${r.id}/edit`)}
+                onDelete={() => handleDelete(r)}
+              />
+            ))
           )}
-        </section>
+        </Accordion>
       </main>
     </div>
   )
