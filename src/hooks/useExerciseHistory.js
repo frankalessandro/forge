@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../stores/authStore'
 
 // 1RM estimado con la fórmula de Epley: peso · (1 + reps/30).
 // Con 1 repetición, el 1RM es el propio peso levantado.
@@ -77,12 +78,12 @@ export function useExerciseHistory(exerciseId) {
       setLoading(true)
       setError(null)
 
-      const { data: { user } } = await supabase.auth.getUser()
+      const userId = useAuthStore.getState().user?.id
       const { data, error: err } = await supabase
         .from('workout_sets')
         .select('reps, weight_kg, set_type, session:workout_sessions!inner(id, started_at, finished_at, user_id)')
         .eq('exercise_id', exerciseId)
-        .eq('session.user_id', user.id)
+        .eq('session.user_id', userId)
         .not('session.finished_at', 'is', null)
 
       if (cancelled) return

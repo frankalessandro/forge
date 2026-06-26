@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCurrentUserId } from '../stores/authStore'
 import { planSplit } from '../utils/routineTemplates'
 
 export function useRoutines() {
@@ -17,11 +18,11 @@ export function useRoutines() {
   }, [])
 
   const getUserRoutines = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
       .select('id, name, description, category, routine_exercises(count)')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data.map((r) => ({
@@ -51,11 +52,11 @@ export function useRoutines() {
   }, [])
 
   const createRoutine = useCallback(async ({ name, description, category }) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         name,
         description: description || null,
         category: category || null,
@@ -112,7 +113,7 @@ export function useRoutines() {
   // Trae el catálogo, arma el plan (lógica pura en routineTemplates) y persiste
   // cada rutina con sus ejercicios. Devuelve las rutinas creadas.
   const generateForGoal = useCallback(async ({ goal, level, daysPerWeek }) => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const userId = getCurrentUserId()
 
     const { data: exercises, error: exError } = await supabase
       .from('exercises')
@@ -129,7 +130,7 @@ export function useRoutines() {
       const { data: inserted, error: rError } = await supabase
         .from('routines')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           name: routine.name,
           description: routine.description ?? null,
           category: routine.category ?? null,

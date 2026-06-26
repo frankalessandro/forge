@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, redirect } from 'react-router-dom'
-import { supabase } from './lib/supabase'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import { useAuthStore } from './stores/authStore'
+import Splash from './components/ui/Splash'
 
 // Lazy: cada ruta se descarga en su propio chunk (carga inicial mucho más liviana;
 // recharts, por ejemplo, queda aislado en el chunk del Perfil).
@@ -23,54 +24,71 @@ const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
 const Friends = lazy(() => import('./routes/app/Friends'))
 const PublicProfile = lazy(() => import('./routes/app/PublicProfile'))
 
-function Fallback() {
-  return <div className="min-h-screen bg-ink-950" />
-}
-
 function page(node) {
-  return <Suspense fallback={<Fallback />}>{node}</Suspense>
+  return <Suspense fallback={<Splash />}>{node}</Suspense>
 }
 
-async function requireAuth() {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw redirect('/login')
-  return null
+// Rutas protegidas. Render optimista: si hay sesión (aunque sea el seed de
+// localStorage) entramos ya; si todavía no confirmamos nada mostramos el splash;
+// solo redirigimos a login cuando supabase confirmó que no hay sesión.
+function RequireAuth() {
+  const session = useAuthStore((s) => s.session)
+  const ready = useAuthStore((s) => s.ready)
+  if (session) return <Outlet />
+  if (!ready) return <Splash />
+  return <Navigate to="/login" replace />
 }
-async function redirectIfAuth() {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session) throw redirect('/app/dashboard')
-  return null
+
+// Rutas de invitado (login / registro). Si ya hay sesión, al dashboard.
+// El seed síncrono cubre el caso del usuario logueado: nunca flashea el login.
+function GuestOnly() {
+  const session = useAuthStore((s) => s.session)
+  if (session) return <Navigate to="/app/dashboard" replace />
+  return <Outlet />
 }
-async function rootRedirect() {
-  const { data: { session } } = await supabase.auth.getSession()
-  throw redirect(session ? '/app/dashboard' : '/login')
+
+function RootRedirect() {
+  const session = useAuthStore((s) => s.session)
+  const ready = useAuthStore((s) => s.ready)
+  if (session) return <Navigate to="/app/dashboard" replace />
+  if (!ready) return <Splash />
+  return <Navigate to="/login" replace />
 }
 
 export const router = createBrowserRouter([
-  { path: '/', loader: rootRedirect },
-  { path: '/login', loader: redirectIfAuth, element: page(<Login />) },
-  { path: '/register', loader: redirectIfAuth, element: page(<Register />) },
+  { path: '/', element: <RootRedirect /> },
+  {
+    element: <GuestOnly />,
+    children: [
+      { path: '/login', element: page(<Login />) },
+      { path: '/register', element: page(<Register />) },
+    ],
+  },
   {
     path: '/app',
-    loader: requireAuth,
-    element: page(<AppLayout />),
+    element: <RequireAuth />,
     children: [
-      { path: 'dashboard', element: <Dashboard /> },
-      { path: 'exercises', element: <Exercises /> },
-      { path: 'exercises/:id', element: <ExerciseDetail /> },
-      { path: 'routines', element: <Routines /> },
-      { path: 'routines/new', element: <RoutineEditor /> },
-      { path: 'routines/:id', element: <RoutineDetail /> },
-      { path: 'routines/:id/edit', element: <RoutineEditor /> },
-      { path: 'workout/start', element: <Start /> },
-      { path: 'workout/active', element: <Active /> },
-      { path: 'workout/summary/:sessionId', element: <Summary /> },
-      { path: 'profile', element: <Profile /> },
-      { path: 'streak', element: <Streak /> },
-      { path: 'friends', element: <Friends /> },
-      { path: 'u/:userId', element: <PublicProfile /> },
-      { path: 'history', element: <History /> },
-      { path: 'history/:sessionId', element: <HistoryDetail /> },
+      {
+        element: page(<AppLayout />),
+        children: [
+          { path: 'dashboard', element: <Dashboard /> },
+          { path: 'exercises', element: <Exercises /> },
+          { path: 'exercises/:id', element: <ExerciseDetail /> },
+          { path: 'routines', element: <Routines /> },
+          { path: 'routines/new', element: <RoutineEditor /> },
+          { path: 'routines/:id', element: <RoutineDetail /> },
+          { path: 'routines/:id/edit', element: <RoutineEditor /> },
+          { path: 'workout/start', element: <Start /> },
+          { path: 'workout/active', element: <Active /> },
+          { path: 'workout/summary/:sessionId', element: <Summary /> },
+          { path: 'profile', element: <Profile /> },
+          { path: 'streak', element: <Streak /> },
+          { path: 'friends', element: <Friends /> },
+          { path: 'u/:userId', element: <PublicProfile /> },
+          { path: 'history', element: <History /> },
+          { path: 'history/:sessionId', element: <HistoryDetail /> },
+        ],
+      },
     ],
   },
 ])
