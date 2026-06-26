@@ -156,7 +156,7 @@ function Calendar({ trainedSet }) {
   const monthCount = cells.filter((d) => d && trainedSet.has(toDateStr(d))).length
 
   const monthLabel = view
-    .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+    .toLocaleDateString('es', { month: 'long', year: 'numeric' })
     .replace(/^\w/, (c) => c.toUpperCase())
 
   const shift = (delta) =>

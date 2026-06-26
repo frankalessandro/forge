@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Flame, Dumbbell, Layers, Trophy, Lock } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
 import PageHeader from '../../components/ui/PageHeader'
@@ -50,10 +50,10 @@ export default function PublicProfile() {
     let cancelled = false
     async function load() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const myId = useAuthStore.getState().user?.id
         const [theirs, mine] = await Promise.all([
           getFriendProfile(userId),
-          getFriendProfile(user.id),
+          getFriendProfile(myId),
         ])
         if (cancelled) return
         if (!theirs) { setDenied(true); return }

@@ -90,7 +90,7 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
                 label="Duración"
               />
               <Stat
-                value={totalVolume > 0 ? totalVolume.toLocaleString('es-AR') : '—'}
+                value={totalVolume > 0 ? totalVolume.toLocaleString('es') : '—'}
                 suffix={totalVolume > 0 ? 'kg' : ''}
                 label="Volumen"
                 variant="accent"

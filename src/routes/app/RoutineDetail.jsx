@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Play, Pencil } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
 import PageHeader from '../../components/ui/PageHeader'
@@ -32,12 +32,10 @@ export default function RoutineDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const [data, { data: { user } }] = await Promise.all([
-          getRoutineDetail(id),
-          supabase.auth.getUser(),
-        ])
+        const data = await getRoutineDetail(id)
+        const userId = useAuthStore.getState().user?.id
         setRoutine(data)
-        setIsOwner(Boolean(user && data.user_id === user.id))
+        setIsOwner(Boolean(userId && data.user_id === userId))
       } catch (err) {
         setError(err.message)
       } finally {

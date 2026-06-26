@@ -168,7 +168,7 @@ function Stat({ value, label, suffix, accent, to }) {
   const inner = (
     <>
       <p className={`stat-num text-3xl ${accent ? 'text-accent' : 'text-zinc-100'}`}>
-        {typeof value === 'number' ? value.toLocaleString('es-AR') : value}
+        {typeof value === 'number' ? value.toLocaleString('es') : value}
         {suffix && <span className="text-base font-semibold text-zinc-500 ml-0.5">{suffix}</span>}
       </p>
       <p className="eyebrow mt-1.5">{label}</p>

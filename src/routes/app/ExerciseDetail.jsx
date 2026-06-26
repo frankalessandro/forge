@@ -51,8 +51,11 @@ export default function ExerciseDetail() {
           <div className="space-y-7">
             <div>
               <h1 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 leading-none mb-3">
-                {exercise.name}
+                {exercise.name_es ?? exercise.name}
               </h1>
+              {exercise.name_es && (
+                <p className="text-xs text-zinc-600 -mt-2 mb-3 uppercase tracking-wide">{exercise.name}</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {exercise.category && <span className="chip-muted">{exercise.category}</span>}
                 {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
@@ -129,7 +132,7 @@ function PRCard({ label, value, unit, highlight }) {
     <div className={`border rounded-2xl p-4 ${highlight ? 'bg-accent/10 border-accent/25' : 'card'}`}>
       <p className="eyebrow text-zinc-500">{label}</p>
       <p className={`stat-num text-2xl mt-1 ${highlight ? 'text-accent' : 'text-zinc-100'}`}>
-        {value.toLocaleString('es-AR')}
+        {value.toLocaleString('es')}
         {unit && <span className="text-sm font-semibold text-zinc-500 ml-1">{unit}</span>}
       </p>
     </div>
@@ -166,8 +169,8 @@ function ProgressSection({ exerciseId }) {
           Progreso
         </h2>
         <div className="card border-dashed px-6 py-8 text-center">
-          <p className="text-sm text-zinc-500">Todavía no registraste este ejercicio.</p>
-          <p className="text-xs text-zinc-600 mt-1">Cuando lo entrenes verás aquí tu evolución y tus récords.</p>
+          <p className="text-sm text-zinc-500">Aún no has registrado este ejercicio.</p>
+          <p className="text-xs text-zinc-600 mt-1">Cuando lo entrenes, verás aquí tu evolución y tus records.</p>
         </div>
       </div>
     )
@@ -223,7 +226,7 @@ function ProgressSection({ exerciseId }) {
               <Tooltip
                 contentStyle={{ background: '#17171b', border: '1px solid #2a2a31', borderRadius: 12, color: '#fafafa' }}
                 labelStyle={{ color: '#a1a1aa' }}
-                formatter={(value) => [`${value.toLocaleString('es-AR')} ${active.unit}`, active.label]}
+                formatter={(value) => [`${value.toLocaleString('es')} ${active.unit}`, active.label]}
               />
               <Line type="monotone" dataKey="value" stroke="#a3e635" dot={{ r: 2, fill: '#a3e635' }} strokeWidth={2.5} />
             </LineChart>

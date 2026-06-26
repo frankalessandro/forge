@@ -188,7 +188,7 @@ export default function Friends() {
           ) : friends.length === 0 ? (
             <div className="card border-dashed px-6 py-10 text-center">
               <Users size={32} className="mx-auto text-zinc-600 mb-3" />
-              <p className="display text-sm text-zinc-300">Todavía no tienes amigos agregados</p>
+              <p className="display text-sm text-zinc-300">Aún no tienes amigos agregados</p>
               <p className="text-sm text-zinc-500 mt-1">Busca a alguien por su nombre para empezar.</p>
             </div>
           ) : (
