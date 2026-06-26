@@ -68,7 +68,7 @@ export default function AppLayout() {
         <>
           {/* Tab bar */}
           <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-ink-800 bg-ink-900/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-            <div className="max-w-2xl mx-auto grid grid-cols-5 items-center">
+            <div className="max-w-2xl mx-auto grid grid-cols-5 items-center h-16">
               {TABS.slice(0, 2).map((t) => (
                 <Tab key={t.to} {...t} />
               ))}

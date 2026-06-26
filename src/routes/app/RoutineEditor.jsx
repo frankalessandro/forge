@@ -174,7 +174,7 @@ export default function RoutineEditor() {
     <div className="min-h-screen bg-ink-950">
       <PageHeader title={isEdit ? 'Editar rutina' : 'Nueva rutina'} back={isEdit ? `/app/routines/${id}` : '/app/routines'} />
 
-      <main className="max-w-2xl mx-auto px-5 py-6 space-y-6 pb-28">
+      <main className="max-w-2xl mx-auto px-5 py-6 space-y-6 pb-[calc(var(--nav-h)+6rem)]">
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-40 card" />
@@ -242,7 +242,7 @@ export default function RoutineEditor() {
       </main>
 
       {!loading && (
-        <div className="fixed bottom-0 inset-x-0 z-20 bg-ink-950/90 backdrop-blur-md border-t border-ink-800 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="fixed bottom-[var(--nav-h)] inset-x-0 z-30 bg-ink-950/90 backdrop-blur-md border-t border-ink-800 px-5 py-4">
           <div className="max-w-2xl mx-auto">
             <button onClick={handleSave} disabled={saving} className="btn-accent w-full py-3.5 text-sm">
               {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear rutina'}

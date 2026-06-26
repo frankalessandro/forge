@@ -27,6 +27,11 @@
   html {
     color-scheme: dark;
   }
+  /* Altura del tab bar inferior (incluye safe-area). La usan los CTA
+     fijos de las páginas para no quedar tapados por el navbar. */
+  :root {
+    --nav-h: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
   body {
     @apply bg-ink-950 text-zinc-100 font-sans antialiased;
   }
