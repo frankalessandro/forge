@@ -164,6 +164,7 @@ export default function Routines() {
     try {
       await deleteRoutine(routine.id)
       setUserRoutines((prev) => prev.filter((r) => r.id !== routine.id))
+      setGeneratedRoutines((prev) => prev.filter((r) => r.id !== routine.id))
       sileo.success({ title: 'Rutina eliminada.' })
     } catch (err) {
       sileo.error({ title: 'Error al eliminar', description: err.message })
