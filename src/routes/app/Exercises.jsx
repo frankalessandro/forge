@@ -86,7 +86,7 @@ export default function Exercises() {
           <div className="grid gap-3 sm:grid-cols-2">
             {exercises.map((ex) => (
               <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover p-4">
-                <p className="display text-sm text-zinc-100">{ex.name}</p>
+                <p className="display text-sm text-zinc-100">{ex.name_es ?? ex.name}</p>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {ex.muscle_groups && <span className="chip-muted">{ex.muscle_groups.name}</span>}
                   {ex.equipment && <span className="chip-muted">{ex.equipment}</span>}

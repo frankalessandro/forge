@@ -51,8 +51,11 @@ export default function ExerciseDetail() {
           <div className="space-y-7">
             <div>
               <h1 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 leading-none mb-3">
-                {exercise.name}
+                {exercise.name_es ?? exercise.name}
               </h1>
+              {exercise.name_es && (
+                <p className="text-xs text-zinc-600 -mt-2 mb-3 uppercase tracking-wide">{exercise.name}</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {exercise.category && <span className="chip-muted">{exercise.category}</span>}
                 {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
