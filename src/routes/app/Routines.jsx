@@ -1,54 +1,67 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Dumbbell } from 'lucide-react'
+import { ChevronRight, Dumbbell, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useRoutines } from '../../hooks/useRoutines'
+import PageHeader from '../../components/ui/PageHeader'
 
 const CATEGORY_COLORS = {
-  PPL: 'bg-blue-100 text-blue-700',
-  'Full Body': 'bg-green-100 text-green-700',
-  'Upper Lower': 'bg-purple-100 text-purple-700',
+  PPL: 'bg-sky-400/15 text-sky-300',
+  'Full Body': 'bg-accent/15 text-accent',
+  'Upper Lower': 'bg-fuchsia-400/15 text-fuchsia-300',
 }
 
 function CategoryBadge({ category }) {
-  const cls = CATEGORY_COLORS[category] ?? 'bg-gray-800 text-gray-300'
-  return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>{category}</span>
+  if (!category) return null
+  const cls = CATEGORY_COLORS[category] ?? 'bg-ink-800 text-zinc-400'
+  return <span className={`chip ${cls}`}>{category}</span>
 }
 
-function RoutineCard({ routine }) {
-  const navigate = useNavigate()
+function RoutineCard({ routine, onOpen }) {
   return (
-    <button
-      onClick={() => navigate(`/app/routines/${routine.id}`)}
-      className="w-full flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 hover:bg-gray-800 transition-colors text-left"
-    >
+    <button onClick={onOpen} className="w-full card card-hover flex items-center gap-4 px-5 py-4 text-left">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-semibold text-gray-100 truncate">{routine.name}</p>
+          <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
           <CategoryBadge category={routine.category} />
         </div>
-        {routine.description && <p className="text-sm text-gray-500 truncate">{routine.description}</p>}
-        <p className="text-xs text-gray-500 mt-1">{routine.exerciseCount} ejercicios</p>
+        {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
+        <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
       </div>
-      <ChevronRight size={18} className="text-gray-500 shrink-0" />
+      <ChevronRight size={18} className="text-zinc-600 shrink-0" />
     </button>
   )
 }
 
-function SkeletonCard() {
+function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 animate-pulse">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="h-4 bg-gray-800 rounded w-40" />
-        <div className="h-4 bg-gray-800 rounded w-16" />
+    <div className="card flex items-center gap-2 px-5 py-4">
+      <button onClick={onOpen} className="flex-1 min-w-0 text-left">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
+          <CategoryBadge category={routine.category} />
+        </div>
+        {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
+        <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
+      </button>
+      <div className="flex items-center gap-1 shrink-0">
+        <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-accent transition-colors" title="Editar">
+          <Pencil size={16} />
+        </button>
+        <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Eliminar">
+          <Trash2 size={16} />
+        </button>
       </div>
-      <div className="h-3 bg-gray-800 rounded w-56 mb-1" />
-      <div className="h-3 bg-gray-800 rounded w-20" />
     </div>
   )
 }
 
+function SkeletonCard() {
+  return <div className="h-[72px] card animate-pulse" />
+}
+
 export default function Routines() {
-  const { getPublicRoutines, getUserRoutines } = useRoutines()
+  const navigate = useNavigate()
+  const { getPublicRoutines, getUserRoutines, deleteRoutine } = useRoutines()
   const [publicRoutines, setPublicRoutines] = useState([])
   const [userRoutines, setUserRoutines] = useState([])
   const [loading, setLoading] = useState(true)
@@ -69,44 +82,69 @@ export default function Routines() {
     load()
   }, [getPublicRoutines, getUserRoutines])
 
-  return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <Link to="/app/dashboard" className="text-gray-500 hover:text-gray-100 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="text-lg font-bold text-gray-100">Rutinas</h1>
-        </div>
-      </header>
+  const handleDelete = async (routine) => {
+    if (!window.confirm(`¿Eliminar la rutina "${routine.name}"?`)) return
+    try {
+      await deleteRoutine(routine.id)
+      setUserRoutines((prev) => prev.filter((r) => r.id !== routine.id))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+  return (
+    <div className="min-h-screen bg-ink-950">
+      <PageHeader
+        title="Rutinas"
+        back="/app/dashboard"
+        right={
+          <Link to="/app/routines/new" className="btn-accent px-3 py-1.5 text-xs">
+            <Plus size={15} />
+            Crear
+          </Link>
+        }
+      />
+
+      <main className="max-w-2xl mx-auto px-5 py-6 space-y-8">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</p>
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         )}
 
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Predeterminadas</h2>
+          <h2 className="section-title mb-3">Predeterminadas</h2>
           <div className="space-y-3">
             {loading
               ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-              : publicRoutines.map((r) => <RoutineCard key={r.id} routine={r} />)}
+              : publicRoutines.map((r) => (
+                  <RoutineCard key={r.id} routine={r} onOpen={() => navigate(`/app/routines/${r.id}`)} />
+                ))}
           </div>
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Mis rutinas</h2>
+          <h2 className="section-title mb-3">Mis rutinas</h2>
           {loading ? (
             <SkeletonCard />
           ) : userRoutines.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl px-6 py-10 text-center">
-              <Dumbbell size={32} className="mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500 font-medium">Todavía no tenés rutinas propias</p>
-              <p className="text-sm text-gray-500 mt-1">Próximamente podrás crear las tuyas</p>
-            </div>
+            <Link
+              to="/app/routines/new"
+              className="block card border-dashed px-6 py-10 text-center card-hover"
+            >
+              <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
+              <p className="display text-sm text-zinc-300">Todavía no tenés rutinas propias</p>
+              <p className="text-sm text-accent mt-1">Creá tu primera rutina</p>
+            </Link>
           ) : (
             <div className="space-y-3">
-              {userRoutines.map((r) => <RoutineCard key={r.id} routine={r} />)}
+              {userRoutines.map((r) => (
+                <UserRoutineCard
+                  key={r.id}
+                  routine={r}
+                  onOpen={() => navigate(`/app/routines/${r.id}`)}
+                  onEdit={() => navigate(`/app/routines/${r.id}/edit`)}
+                  onDelete={() => handleDelete(r)}
+                />
+              ))}
             </div>
           )}
         </section>

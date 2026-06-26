@@ -3,17 +3,18 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { AuthShell } from './Login'
 
-const registerSchema = z.object({
-  email: z.string().email('Ingresá un email válido'),
-  password: z
-    .string()
-    .min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-})
+const registerSchema = z
+  .object({
+    email: z.string().email('Ingresá un email válido'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  })
 
 export default function Register() {
   const navigate = useNavigate()
@@ -34,70 +35,50 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
-      <div className="w-full max-w-md bg-gray-900 rounded-2xl shadow p-8">
-        <h1 className="text-2xl font-bold text-gray-100 mb-6">Crear cuenta</h1>
+    <AuthShell>
+      <h1 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 mb-1">
+        Crear cuenta
+      </h1>
+      <p className="text-sm text-zinc-500 mb-7">Empezá a registrar tu progreso.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <input
-              type="email"
-              {...register('email')}
-              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="tu@email.com"
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-            )}
-          </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="field-label">Email</label>
+          <input type="email" {...register('email')} className="input" placeholder="tu@email.com" />
+          {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-            <input
-              type="password"
-              {...register('password')}
-              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-            )}
-          </div>
+        <div>
+          <label className="field-label">Contraseña</label>
+          <input type="password" {...register('password')} className="input" placeholder="••••••••" />
+          {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Confirmar contraseña</label>
-            <input
-              type="password"
-              {...register('confirmPassword')}
-              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-            {errors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
-            )}
-          </div>
-
-          {errors.root && (
-            <p className="text-red-500 text-sm">{errors.root.message}</p>
+        <div>
+          <label className="field-label">Confirmar contraseña</label>
+          <input type="password" {...register('confirmPassword')} className="input" placeholder="••••••••" />
+          {errors.confirmPassword && (
+            <p className="text-red-400 text-xs mt-1">{errors.confirmPassword.message}</p>
           )}
+        </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
-          </button>
-        </form>
+        {errors.root && (
+          <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">
+            {errors.root.message}
+          </p>
+        )}
 
-        <p className="text-sm text-gray-400 text-center mt-4">
-          ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-indigo-600 hover:underline font-medium">
-            Iniciá sesión
-          </Link>
-        </p>
-      </div>
-    </div>
+        <button type="submit" disabled={isSubmitting} className="btn-accent w-full py-3 text-sm">
+          {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
+        </button>
+      </form>
+
+      <p className="text-sm text-zinc-500 text-center mt-6">
+        ¿Ya tenés cuenta?{' '}
+        <Link to="/login" className="text-accent hover:text-accent-bright font-semibold">
+          Iniciá sesión
+        </Link>
+      </p>
+    </AuthShell>
   )
 }

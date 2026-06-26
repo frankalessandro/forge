@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Dumbbell, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Dumbbell, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import PageHeader from '../../components/ui/PageHeader'
 
 const PAGE_SIZE = 10
 
@@ -17,14 +18,16 @@ function formatDuration(startedAt, finishedAt) {
 }
 
 function calcVolume(sets) {
-  return sets
-    .filter((s) => s.set_type !== 'warmup')
-    .reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
 }
 
-function formatTime(isoStr) {
+function formatDay(isoStr) {
   const d = new Date(isoStr)
-  return d.toLocaleDateString('es-AR') + ' ' + d.toTimeString().slice(0, 5)
+  return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+function formatHour(isoStr) {
+  return new Date(isoStr).toTimeString().slice(0, 5)
 }
 
 export default function History() {
@@ -36,76 +39,59 @@ export default function History() {
   const [hasMore, setHasMore] = useState(false)
 
   useEffect(() => {
+    async function load(p) {
+      setLoading(true)
+      const from = p * PAGE_SIZE
+      const to = from + PAGE_SIZE
+
+      const { data, error } = await supabase
+        .from('workout_sessions')
+        .select('id, started_at, finished_at, notes')
+        .not('finished_at', 'is', null)
+        .order('started_at', { ascending: false })
+        .range(from, to)
+
+      if (error || !data) { setLoading(false); return }
+
+      setHasMore(data.length > PAGE_SIZE)
+      const pageSessions = data.slice(0, PAGE_SIZE)
+      setSessions(pageSessions)
+
+      const stats = {}
+      await Promise.all(
+        pageSessions.map(async (sess) => {
+          const { data: sets } = await supabase
+            .from('workout_sets')
+            .select('exercise_id, reps, weight_kg, set_type')
+            .eq('session_id', sess.id)
+          if (sets) {
+            const exerciseIds = new Set(sets.map((s) => s.exercise_id))
+            stats[sess.id] = { volume: calcVolume(sets), exerciseCount: exerciseIds.size }
+          }
+        })
+      )
+      setSessionStats(stats)
+      setLoading(false)
+    }
     load(page)
   }, [page])
 
-  async function load(p) {
-    setLoading(true)
-    const from = p * PAGE_SIZE
-    const to = from + PAGE_SIZE
-
-    const { data, error } = await supabase
-      .from('workout_sessions')
-      .select('id, started_at, finished_at, notes')
-      .not('finished_at', 'is', null)
-      .order('started_at', { ascending: false })
-      .range(from, to)
-
-    if (error || !data) { setLoading(false); return }
-
-    setHasMore(data.length > PAGE_SIZE)
-    const page_sessions = data.slice(0, PAGE_SIZE)
-    setSessions(page_sessions)
-
-    const stats = {}
-    await Promise.all(
-      page_sessions.map(async (sess) => {
-        const { data: sets } = await supabase
-          .from('workout_sets')
-          .select('exercise_id, reps, weight_kg, set_type')
-          .eq('session_id', sess.id)
-
-        if (sets) {
-          const exerciseIds = new Set(sets.map((s) => s.exercise_id))
-          stats[sess.id] = {
-            volume: calcVolume(sets),
-            exerciseCount: exerciseIds.size,
-          }
-        }
-      })
-    )
-    setSessionStats(stats)
-    setLoading(false)
-  }
-
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <button
-            onClick={() => navigate('/app/dashboard')}
-            className="text-gray-500 hover:text-gray-100 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-bold text-gray-100">Historial</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-ink-950">
+      <PageHeader title="Progreso" back="/app/dashboard" />
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-3">
+      <main className="max-w-2xl mx-auto px-5 py-6 space-y-3">
         {loading && (
           <div className="animate-pulse space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-gray-800 rounded-xl" />
-            ))}
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[88px] card" />)}
           </div>
         )}
 
         {!loading && sessions.length === 0 && (
-          <div className="text-center py-20 text-gray-500">
-            <Dumbbell size={40} className="mx-auto mb-3 text-gray-500" />
-            <p className="font-medium text-gray-500">No hay entrenamientos registrados</p>
-            <p className="text-sm mt-1">Completá tu primer sesión para verla aquí</p>
+          <div className="text-center py-20 text-zinc-500">
+            <Dumbbell size={40} className="mx-auto mb-3 text-zinc-700" />
+            <p className="display text-sm text-zinc-400">No hay entrenamientos registrados</p>
+            <p className="text-sm mt-1 text-zinc-600">Completá tu primera sesión para verla acá</p>
           </div>
         )}
 
@@ -115,15 +101,18 @@ export default function History() {
             <button
               key={sess.id}
               onClick={() => navigate(`/app/history/${sess.id}`)}
-              className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-left hover:border-gray-600 transition-colors"
+              className="w-full card card-hover p-4 text-left"
             >
-              <p className="font-semibold text-gray-100 text-sm">{formatTime(sess.started_at)}</p>
-              <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                <span>{formatDuration(sess.started_at, sess.finished_at)}</span>
+              <div className="flex items-center justify-between">
+                <p className="display text-sm text-zinc-100 capitalize">{formatDay(sess.started_at)}</p>
+                <span className="text-xs text-zinc-600 tabular-nums">{formatHour(sess.started_at)}</span>
+              </div>
+              <div className="flex gap-5 mt-2.5">
+                <Metric value={formatDuration(sess.started_at, sess.finished_at)} label="dur" />
                 {stats && (
                   <>
-                    <span>{stats.exerciseCount} ejercicio{stats.exerciseCount !== 1 ? 's' : ''}</span>
-                    <span>{stats.volume > 0 ? `${stats.volume.toLocaleString('es-AR')} kg` : '—'}</span>
+                    <Metric value={stats.exerciseCount} label="ejerc" />
+                    <Metric value={stats.volume > 0 ? `${stats.volume.toLocaleString('es-AR')}` : '—'} label="kg" />
                   </>
                 )}
               </div>
@@ -133,26 +122,27 @@ export default function History() {
 
         {!loading && sessions.length > 0 && (
           <div className="flex justify-between items-center pt-2">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-100 disabled:opacity-40 transition-colors"
-            >
+            <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-100 disabled:opacity-30 transition-colors">
               <ChevronLeft size={16} />
               Anterior
             </button>
-            <span className="text-sm text-gray-500">Página {page + 1}</span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!hasMore}
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-100 disabled:opacity-40 transition-colors"
-            >
+            <span className="eyebrow">Página {page + 1}</span>
+            <button onClick={() => setPage((p) => p + 1)} disabled={!hasMore} className="flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-100 disabled:opacity-30 transition-colors">
               Siguiente
               <ChevronRight size={16} />
             </button>
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function Metric({ value, label }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="stat-num text-base text-zinc-100">{value}</span>
+      <span className="eyebrow">{label}</span>
     </div>
   )
 }

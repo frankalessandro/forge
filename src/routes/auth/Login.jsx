@@ -28,56 +28,60 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
-      <div className="w-full max-w-md bg-gray-900 rounded-2xl shadow p-8">
-        <h1 className="text-2xl font-bold text-gray-100 mb-6">Iniciar sesión</h1>
+    <AuthShell>
+      <h1 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 mb-1">
+        Bienvenido
+      </h1>
+      <p className="text-sm text-zinc-500 mb-7">Entrá y seguí forjando.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <input
-              type="email"
-              {...register('email')}
-              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="tu@email.com"
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-            )}
-          </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="field-label">Email</label>
+          <input type="email" {...register('email')} className="input" placeholder="tu@email.com" />
+          {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-            <input
-              type="password"
-              {...register('password')}
-              className="w-full border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-            )}
-          </div>
+        <div>
+          <label className="field-label">Contraseña</label>
+          <input type="password" {...register('password')} className="input" placeholder="••••••••" />
+          {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
+        </div>
 
-          {errors.root && (
-            <p className="text-red-500 text-sm">{errors.root.message}</p>
-          )}
+        {errors.root && (
+          <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">
+            {errors.root.message}
+          </p>
+        )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {isSubmitting ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
+        <button type="submit" disabled={isSubmitting} className="btn-accent w-full py-3 text-sm">
+          {isSubmitting ? 'Ingresando…' : 'Ingresar'}
+        </button>
+      </form>
 
-        <p className="text-sm text-gray-400 text-center mt-4">
-          ¿No tenés cuenta?{' '}
-          <Link to="/register" className="text-indigo-600 hover:underline font-medium">
-            Registrate
-          </Link>
+      <p className="text-sm text-zinc-500 text-center mt-6">
+        ¿No tenés cuenta?{' '}
+        <Link to="/register" className="text-accent hover:text-accent-bright font-semibold">
+          Registrate
+        </Link>
+      </p>
+    </AuthShell>
+  )
+}
+
+export function AuthShell({ children }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-ink-950">
+      {/* Brand band */}
+      <div className="relative overflow-hidden bg-accent text-ink-950 px-6 pt-14 pb-12">
+        <p className="font-display uppercase tracking-[0.3em] text-xs font-semibold opacity-70">
+          Gym tracker
         </p>
+        <p className="font-display font-bold uppercase tracking-tight text-6xl leading-none mt-2">
+          Forge
+        </p>
+      </div>
+      <div className="flex-1 flex items-start justify-center px-6 -mt-6">
+        <div className="w-full max-w-md card p-7">{children}</div>
       </div>
     </div>
   )

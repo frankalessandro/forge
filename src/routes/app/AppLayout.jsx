@@ -1,40 +1,151 @@
-import { Outlet, NavLink } from 'react-router-dom'
-import { Home, Dumbbell, History, User } from 'lucide-react'
+import { useState } from 'react'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Home, ClipboardList, TrendingUp, User, Plus, Play, Dumbbell, Scale, X } from 'lucide-react'
+import { useWorkout } from '../../hooks/useWorkout'
+import Sheet from '../../components/ui/Sheet'
 
 const TABS = [
   { to: '/app/dashboard', label: 'Inicio', icon: Home },
-  { to: '/app/exercises', label: 'Ejercicios', icon: Dumbbell },
-  { to: '/app/history', label: 'Historial', icon: History },
+  { to: '/app/routines', label: 'Rutinas', icon: ClipboardList },
+  { to: '/app/history', label: 'Progreso', icon: TrendingUp },
   { to: '/app/profile', label: 'Perfil', icon: User },
 ]
 
-export default function AppLayout() {
+function QuickAction({ icon: Icon, title, subtitle, onClick, accent }) {
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Cada página trae su propio header; el Outlet renderiza la ruta activa */}
-      <div className="pb-16">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-4 rounded-2xl px-4 py-3.5 mb-2 text-left transition-colors bg-ink-850 border border-ink-800 hover:border-ink-600"
+    >
+      <div
+        className={`rounded-xl p-2.5 shrink-0 ${
+          accent ? 'bg-accent text-ink-950' : 'bg-ink-800 text-accent'
+        }`}
+      >
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0">
+        <p className="display text-sm text-zinc-100">{title}</p>
+        <p className="text-xs text-zinc-500">{subtitle}</p>
+      </div>
+    </button>
+  )
+}
+
+export default function AppLayout() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { startSession } = useWorkout()
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [starting, setStarting] = useState(false)
+
+  // El entrenamiento activo es pantalla completa: ocultamos el nav.
+  const hideNav = location.pathname.startsWith('/app/workout/active')
+
+  const handleStartFree = async () => {
+    try {
+      setStarting(true)
+      await startSession()
+      setSheetOpen(false)
+      navigate('/app/workout/active')
+    } catch {
+      setStarting(false)
+    }
+  }
+
+  const go = (path) => {
+    setSheetOpen(false)
+    navigate(path)
+  }
+
+  return (
+    <div className="min-h-screen bg-ink-950">
+      <div className={hideNav ? '' : 'pb-24'}>
         <Outlet />
       </div>
 
-      {/* Nav inferior persistente para movernos entre secciones al probar */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-gray-800 bg-gray-900/95 backdrop-blur">
-        <div className="max-w-2xl mx-auto grid grid-cols-4">
-          {TABS.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-2.5 text-xs transition-colors ${
-                  isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
-                }`
-              }
+      {!hideNav && (
+        <>
+          {/* Tab bar */}
+          <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-ink-800 bg-ink-900/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
+            <div className="max-w-2xl mx-auto grid grid-cols-5 items-center">
+              {TABS.slice(0, 2).map((t) => (
+                <Tab key={t.to} {...t} />
+              ))}
+
+              {/* Slot central: FAB */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setSheetOpen(true)}
+                  className="-mt-7 w-14 h-14 rounded-2xl bg-accent text-ink-950 flex items-center justify-center glow-accent hover:bg-accent-bright active:scale-95 transition-all"
+                  aria-label="Acciones rápidas"
+                >
+                  <Plus size={26} strokeWidth={2.5} />
+                </button>
+              </div>
+
+              {TABS.slice(2).map((t) => (
+                <Tab key={t.to} {...t} />
+              ))}
+            </div>
+          </nav>
+
+          <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="¿Qué querés hacer?">
+            <QuickAction
+              icon={Play}
+              title={starting ? 'Iniciando…' : 'Entrenar libre'}
+              subtitle="Sesión vacía, agregá sobre la marcha"
+              onClick={handleStartFree}
+              accent
+            />
+            <QuickAction
+              icon={ClipboardList}
+              title="Desde una rutina"
+              subtitle="Elegí una plantilla o la tuya"
+              onClick={() => go('/app/workout/start')}
+            />
+            <QuickAction
+              icon={Dumbbell}
+              title="Explorar ejercicios"
+              subtitle="Catálogo y músculos que trabajan"
+              onClick={() => go('/app/exercises')}
+            />
+            <QuickAction
+              icon={Scale}
+              title="Registrar peso"
+              subtitle="Actualizá tu progreso corporal"
+              onClick={() => go('/app/profile')}
+            />
+            <button
+              onClick={() => setSheetOpen(false)}
+              className="w-full flex items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 py-3 mt-1 text-sm transition-colors"
             >
-              <Icon size={20} />
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+              <X size={16} />
+              Cerrar
+            </button>
+          </Sheet>
+        </>
+      )}
     </div>
+  )
+}
+
+function Tab({ to, label, icon: Icon }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex flex-col items-center gap-1 py-3 text-[10px] font-display uppercase tracking-wider transition-colors ${
+          isActive ? 'text-accent' : 'text-zinc-500 hover:text-zinc-300'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+          {label}
+        </>
+      )}
+    </NavLink>
   )
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export const useWorkoutStore = create((set, get) => ({
+export const useWorkoutStore = create((set) => ({
   session: null,       // { id, startedAt, notes }
   exercises: [],       // [{ exerciseId, name, sets: [{ id, reps, weight_kg, set_type, completed, dbId }] }]
   isActive: false,

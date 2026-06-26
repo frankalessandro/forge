@@ -1,27 +1,20 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Dumbbell } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Dumbbell } from 'lucide-react'
 import { useExercise } from '../../hooks/useExercises'
-
-function Badge({ children }) {
-  return (
-    <span className="inline-block bg-gray-800 text-gray-300 text-sm rounded-full px-3 py-1">
-      {children}
-    </span>
-  )
-}
+import PageHeader from '../../components/ui/PageHeader'
 
 function SkeletonDetail() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-7 bg-gray-800 rounded w-1/2" />
+      <div className="h-9 bg-ink-900 rounded w-1/2" />
       <div className="flex gap-2">
-        <div className="h-6 bg-gray-800 rounded-full w-24" />
-        <div className="h-6 bg-gray-800 rounded-full w-20" />
+        <div className="h-7 bg-ink-900 rounded-full w-24" />
+        <div className="h-7 bg-ink-900 rounded-full w-20" />
       </div>
       <div className="space-y-2">
-        <div className="h-4 bg-gray-800 rounded w-full" />
-        <div className="h-4 bg-gray-800 rounded w-5/6" />
-        <div className="h-4 bg-gray-800 rounded w-4/6" />
+        <div className="h-4 bg-ink-900 rounded w-full" />
+        <div className="h-4 bg-ink-900 rounded w-5/6" />
+        <div className="h-4 bg-ink-900 rounded w-4/6" />
       </div>
     </div>
   )
@@ -29,75 +22,59 @@ function SkeletonDetail() {
 
 export default function ExerciseDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const { exercise, loading, error } = useExercise(id)
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-100 transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Volver a ejercicios
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-ink-950">
+      <PageHeader title="Ejercicio" back={true} />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-2xl mx-auto px-5 py-6">
         {loading && <SkeletonDetail />}
-
-        {error && (
-          <p className="text-red-600">Error: {error}</p>
-        )}
+        {error && <p className="text-red-400">Error: {error}</p>}
 
         {!loading && !error && exercise && (
-          <div className="space-y-6">
+          <div className="space-y-7">
             <div>
-              <h1 className="text-2xl font-bold text-gray-100 mb-3">{exercise.name}</h1>
+              <h1 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 leading-none mb-3">
+                {exercise.name}
+              </h1>
               <div className="flex flex-wrap gap-2">
-                {exercise.category && <Badge>{exercise.category}</Badge>}
-                {exercise.muscle_groups && <Badge>{exercise.muscle_groups.name}</Badge>}
-                {exercise.equipment && <Badge><Dumbbell size={13} className="inline mr-1" />{exercise.equipment}</Badge>}
+                {exercise.category && <span className="chip-muted">{exercise.category}</span>}
+                {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
+                {exercise.equipment && (
+                  <span className="chip-muted"><Dumbbell size={12} className="inline mr-0.5" />{exercise.equipment}</span>
+                )}
               </div>
             </div>
 
             {exercise.description && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Descripción</h2>
-                <p className="text-gray-300 leading-relaxed">{exercise.description}</p>
+                <h2 className="section-title mb-2">Descripción</h2>
+                <p className="text-zinc-300 leading-relaxed">{exercise.description}</p>
               </div>
             )}
 
             {exercise.primary_muscles?.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Músculos principales</h2>
+                <h2 className="section-title mb-2">Músculos principales</h2>
                 <div className="flex flex-wrap gap-2">
-                  {exercise.primary_muscles.map((m) => (
-                    <Badge key={m}>{m}</Badge>
-                  ))}
+                  {exercise.primary_muscles.map((m) => <span key={m} className="chip-accent">{m}</span>)}
                 </div>
               </div>
             )}
 
             {exercise.secondary_muscles?.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Músculos secundarios</h2>
+                <h2 className="section-title mb-2">Músculos secundarios</h2>
                 <div className="flex flex-wrap gap-2">
-                  {exercise.secondary_muscles.map((m) => (
-                    <Badge key={m}>{m}</Badge>
-                  ))}
+                  {exercise.secondary_muscles.map((m) => <span key={m} className="chip-muted">{m}</span>)}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {!loading && !error && !exercise && (
-          <p className="text-gray-500">Ejercicio no encontrado.</p>
-        )}
+        {!loading && !error && !exercise && <p className="text-zinc-500">Ejercicio no encontrado.</p>}
       </main>
     </div>
   )

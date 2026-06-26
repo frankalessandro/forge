@@ -6,6 +6,9 @@ import AppLayout from './routes/app/AppLayout'
 import Dashboard from './routes/app/Dashboard'
 import Exercises from './routes/app/Exercises'
 import ExerciseDetail from './routes/app/ExerciseDetail'
+import Routines from './routes/app/Routines'
+import RoutineDetail from './routes/app/RoutineDetail'
+import RoutineEditor from './routes/app/RoutineEditor'
 import Start from './routes/app/workout/Start'
 import Active from './routes/app/workout/Active'
 import Summary from './routes/app/workout/Summary'
@@ -36,6 +39,10 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'exercises', element: <Exercises /> },
       { path: 'exercises/:id', element: <ExerciseDetail /> },
+      { path: 'routines', element: <Routines /> },
+      { path: 'routines/new', element: <RoutineEditor /> },
+      { path: 'routines/:id', element: <RoutineDetail /> },
+      { path: 'routines/:id/edit', element: <RoutineEditor /> },
       { path: 'workout/start', element: <Start /> },
       { path: 'workout/active', element: <Active /> },
       { path: 'workout/summary/:sessionId', element: <Summary /> },

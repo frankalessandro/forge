@@ -1,9 +1,105 @@
 @import "tailwindcss";
 
-html {
-  color-scheme: dark;
+/* ============================================================
+   FORGE — Design System  ·  "Bold deportivo" / dark / lime
+   ============================================================ */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Oswald", "Inter", sans-serif;
+
+  /* Near-black surfaces with subtle elevation steps */
+  --color-ink-950: #0a0a0c;
+  --color-ink-900: #121215;
+  --color-ink-850: #17171b;
+  --color-ink-800: #1f1f24;
+  --color-ink-700: #2a2a31;
+  --color-ink-600: #3a3a43;
+  --color-ink-500: #565660;
+
+  /* Electric lime accent */
+  --color-accent: #a3e635;
+  --color-accent-bright: #c4f95a;
+  --color-accent-dim: #4d7c0f;
 }
 
-body {
-  @apply bg-gray-950 text-gray-100;
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-ink-950 text-zinc-100 font-sans antialiased;
+  }
+  /* Numeric inputs: hide spinners for a cleaner sport look */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  /* Native dark date picker */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+  }
+}
+
+@layer components {
+  /* Surfaces */
+  .card {
+    @apply bg-ink-900 border border-ink-800 rounded-2xl;
+  }
+  .card-hover {
+    @apply transition-all duration-150 hover:border-ink-600 hover:bg-ink-850;
+  }
+
+  /* Typography helpers */
+  .display {
+    @apply font-display font-semibold uppercase tracking-wide;
+  }
+  .stat-num {
+    @apply font-display font-bold tabular-nums tracking-tight leading-none;
+  }
+  .section-title {
+    @apply font-display uppercase tracking-[0.18em] text-xs text-zinc-500 font-semibold;
+  }
+  .eyebrow {
+    @apply font-display uppercase tracking-[0.2em] text-[11px] text-zinc-500 font-medium;
+  }
+  .field-label {
+    @apply block font-display uppercase tracking-[0.2em] text-[11px] text-zinc-500 font-medium mb-1.5;
+  }
+
+  /* Buttons (base utilities repeated to avoid nesting custom classes in @apply) */
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-accent text-ink-950 font-display font-semibold uppercase tracking-wide hover:bg-accent-bright;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 bg-ink-800 text-zinc-100 font-medium border border-ink-700 hover:border-ink-600 hover:bg-ink-700;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl transition-all duration-150 active:scale-[0.98] text-zinc-400 hover:text-zinc-100;
+  }
+
+  /* Form controls */
+  .input {
+    @apply w-full bg-ink-850 border border-ink-700 rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/15 transition;
+  }
+
+  /* Chips / badges */
+  .chip {
+    @apply inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full font-display uppercase tracking-wider;
+  }
+  .chip-muted {
+    @apply inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full font-display uppercase tracking-wider bg-ink-800 text-zinc-400;
+  }
+  .chip-accent {
+    @apply inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full font-display uppercase tracking-wider bg-accent/15 text-accent;
+  }
+
+  /* Glow halo used behind hero blocks */
+  .glow-accent {
+    box-shadow: 0 0 60px -12px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  }
 }
