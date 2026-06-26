@@ -17,6 +17,7 @@ const Start = lazy(() => import('./routes/app/workout/Start'))
 const Active = lazy(() => import('./routes/app/workout/Active'))
 const Summary = lazy(() => import('./routes/app/workout/Summary'))
 const Profile = lazy(() => import('./routes/app/Profile'))
+const Streak = lazy(() => import('./routes/app/Streak'))
 const History = lazy(() => import('./routes/app/History'))
 const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
 const Friends = lazy(() => import('./routes/app/Friends'))
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
       { path: 'workout/active', element: <Active /> },
       { path: 'workout/summary/:sessionId', element: <Summary /> },
       { path: 'profile', element: <Profile /> },
+      { path: 'streak', element: <Streak /> },
       { path: 'friends', element: <Friends /> },
       { path: 'u/:userId', element: <PublicProfile /> },
       { path: 'history', element: <History /> },

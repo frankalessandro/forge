@@ -247,7 +247,9 @@ export default function Profile() {
                 <div>
                   <label className="field-label">Días de entreno / semana</label>
                   <input type="number" min="0" max="7" {...register('training_days_per_week')} className="input" placeholder="4" />
-                  {errors.training_days_per_week && <p className="text-xs text-red-400 mt-1">{errors.training_days_per_week.message}</p>}
+                  {errors.training_days_per_week
+                    ? <p className="text-xs text-red-400 mt-1">{errors.training_days_per_week.message}</p>
+                    : <p className="text-xs text-zinc-600 mt-1">Es tu meta para mantener la racha.</p>}
                 </div>
               </div>
 

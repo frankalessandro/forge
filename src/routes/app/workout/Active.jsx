@@ -158,7 +158,6 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
 const ExerciseCard = memo(function ExerciseCard({
   exercise, lastPerf, onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
 }) {
-  const [showMedia, setShowMedia] = useState(false)
   const lastSet = exercise.sets[exercise.sets.length - 1]
   const handleAddSet = () =>
     onAddSet(exercise.exerciseId, {
@@ -169,24 +168,26 @@ const ExerciseCard = memo(function ExerciseCard({
 
   return (
     <div className="card p-4">
-      <div className="flex items-start gap-2 mb-1">
-        {exercise.imageUrl && (
-          <button
-            onClick={() => setShowMedia((v) => !v)}
-            className="w-9 h-9 rounded-lg overflow-hidden bg-black border border-ink-700 shrink-0"
-            title="Ver demostración"
-          >
-            <img src={exercise.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-          </button>
-        )}
+      <div className="flex items-start gap-2 mb-3">
         <h3 className="display text-sm text-zinc-100 flex-1 min-w-0">{exercise.name}</h3>
         <button onClick={() => onDeleteExercise(exercise.exerciseId)} className="text-zinc-600 hover:text-red-400 transition-colors p-1 -mr-1 -mt-1">
           <Trash2 size={16} />
         </button>
       </div>
 
-      {showMedia && exercise.imageUrl && (
-        <img src={exercise.imageUrl} alt={exercise.name} className="w-full max-h-56 object-contain bg-black rounded-xl border border-ink-800 mb-2.5" loading="lazy" />
+      {/* Espacio para la imagen del ejercicio (placeholder si aún no hay) */}
+      {exercise.imageUrl ? (
+        <img
+          src={exercise.imageUrl}
+          alt={exercise.name}
+          className="w-full h-40 object-contain bg-black rounded-xl border border-ink-800 mb-3"
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full h-40 rounded-xl border border-dashed border-ink-700 bg-ink-850/40 mb-3 flex flex-col items-center justify-center gap-1.5 text-zinc-700">
+          <Dumbbell size={28} strokeWidth={1.5} />
+          <span className="text-xs">Imagen del ejercicio</span>
+        </div>
       )}
 
       <LastPerf sets={lastPerf} />
@@ -314,7 +315,7 @@ export default function Active() {
 
   // ── Handlers estables (no disparan red por tecla: store ahora, DB diferido) ─
   const onWeight = useCallback((exId, idx, value) => {
-    useWorkoutStore.getState().setWeightWithFill(exId, idx, value)
+    useWorkoutStore.getState().updateSet(exId, idx, { weight_kg: value })
     persistExercise(exId)
   }, [persistExercise])
 

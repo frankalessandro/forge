@@ -25,25 +25,6 @@ export const useWorkoutStore = create((set) => ({
       ),
     })),
 
-  // Setea el peso de una serie y lo replica en las demás series del ejercicio
-  // que estén vacías o que reflejaban el valor anterior (no toca las completadas).
-  setWeightWithFill: (exerciseId, setIndex, weight) =>
-    set((s) => ({
-      exercises: s.exercises.map((ex) => {
-        if (ex.exerciseId !== exerciseId) return ex
-        const old = ex.sets[setIndex]?.weight_kg ?? null
-        return {
-          ...ex,
-          sets: ex.sets.map((st, i) => {
-            if (i === setIndex) return { ...st, weight_kg: weight }
-            if (st.completed) return st
-            if (st.weight_kg == null || st.weight_kg === old) return { ...st, weight_kg: weight }
-            return st
-          }),
-        }
-      }),
-    })),
-
   updateSet: (exerciseId, setIndex, patch) =>
     set((s) => ({
       exercises: s.exercises.map((ex) =>
