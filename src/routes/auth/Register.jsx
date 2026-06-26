@@ -41,6 +41,7 @@ const GOALS = [
 
 const ONBOARDING_STEPS = 6
 const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
+const MAX_GOALS = 3
 
 export default function Register() {
   const navigate = useNavigate()
@@ -56,12 +57,19 @@ export default function Register() {
     weight_kg: '',
     activity_level: '',
     training_days_per_week: '',
-    goal: '',
+    goals: [],
   })
   const [saving, setSaving] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(null)
 
   const set = (patch) => setProfile((p) => ({ ...p, ...patch }))
+
+  const toggleGoal = (value) =>
+    setProfile((p) => {
+      if (p.goals.includes(value)) return { ...p, goals: p.goals.filter((g) => g !== value) }
+      if (p.goals.length >= MAX_GOALS) return p
+      return { ...p, goals: [...p.goals, value] }
+    })
 
   const {
     register,
@@ -107,15 +115,18 @@ export default function Register() {
     if (profile.weight_kg) payload.weight_kg = Number(profile.weight_kg)
     if (profile.activity_level) payload.activity_level = profile.activity_level
     if (profile.training_days_per_week !== '') payload.training_days_per_week = Number(profile.training_days_per_week)
-    if (profile.goal) payload.goal = profile.goal
+    if (profile.goals.length) {
+      payload.goals = profile.goals
+      payload.goal = profile.goals[0] // principal, para rutinas y perfil
+    }
 
     if (Object.keys(payload).length) await updateProfile(payload)
     if (profile.weight_kg) await addBodyStat(Number(profile.weight_kg))
 
-    if (profile.goal) {
+    if (profile.goals.length) {
       try {
         await generateForGoal({
-          goal: profile.goal,
+          goal: profile.goals[0],
           level: levelFromActivity(profile.activity_level),
           daysPerWeek: profile.training_days_per_week !== '' ? Number(profile.training_days_per_week) : 3,
         })
@@ -344,17 +355,25 @@ export default function Register() {
         )}
 
         {step === 6 && (
-          <Step eyebrow="Paso 6 de 6" title="¿Cuál es tu objetivo?" subtitle="Vamos a orientar tus rutinas a esto.">
+          <Step
+            eyebrow="Paso 6 de 6"
+            title="¿Cuáles son tus objetivos?"
+            subtitle="Elige hasta 3. El primero orienta tus rutinas generadas."
+          >
             <div className="space-y-2.5">
               {GOALS.map(({ value, label, icon: Icon }) => {
-                const active = profile.goal === value
+                const active = profile.goals.includes(value)
+                const disabled = !active && profile.goals.length >= MAX_GOALS
                 return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => set({ goal: value })}
+                    onClick={() => toggleGoal(value)}
+                    disabled={disabled}
                     className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 border transition-colors text-left ${
-                      active ? 'bg-accent/10 border-accent/50' : 'bg-ink-850 border-ink-700 hover:border-ink-600'
+                      active
+                        ? 'bg-accent/10 border-accent/50'
+                        : `bg-ink-850 border-ink-700 ${disabled ? 'opacity-40' : 'hover:border-ink-600'}`
                     }`}
                   >
                     <div className={`rounded-xl p-2 shrink-0 ${active ? 'bg-accent text-ink-950' : 'bg-ink-800 text-accent'}`}>
