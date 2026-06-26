@@ -15,12 +15,12 @@ export function useExercises({ muscleGroupId, equipment, search } = {}) {
 
       let query = supabase
         .from('exercises')
-        .select('id, name, category, equipment, image_url, muscle_group_id, muscle_groups(id, name)')
+        .select('id, name, name_es, category, equipment, image_url, muscle_group_id, muscle_groups(id, name)')
         .order('name')
 
       if (muscleGroupId) query = query.eq('muscle_group_id', muscleGroupId)
       if (equipment) query = query.ilike('equipment', `%${equipment}%`)
-      if (search) query = query.ilike('name', `%${search}%`)
+      if (search) query = query.or(`name.ilike.%${search}%,name_es.ilike.%${search}%`)
 
       const { data, error: err } = await query
 

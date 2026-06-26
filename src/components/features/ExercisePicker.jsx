@@ -88,7 +88,7 @@ export default function ExercisePicker({ onSelect, onClose, excludeIds = [] }) {
                 <li key={ex.id}>
                   <button onClick={() => onSelect(ex)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-ink-850 transition-colors rounded-lg px-2 -mx-2">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-100">{ex.name}</p>
+                      <p className="text-sm font-medium text-zinc-100">{ex.name_es ?? ex.name}</p>
                       {ex.muscle_groups && <p className="text-xs text-zinc-500">{ex.muscle_groups.name}</p>}
                     </div>
                     {ex.equipment && <span className="chip-muted shrink-0">{ex.equipment}</span>}
