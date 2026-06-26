@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Home, ClipboardList, TrendingUp, User, Plus, Play, Dumbbell, Scale, X } from 'lucide-react'
 import { useWorkout } from '../../hooks/useWorkout'
 import Sheet from '../../components/ui/Sheet'
-import Toaster from '../../components/ui/Toaster'
+import { Toaster } from 'sileo'
 
 const TABS = [
   { to: '/app/dashboard', label: 'Inicio', icon: Home },
@@ -61,7 +61,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-ink-950">
-      <Toaster />
+      <Toaster position="top-right" />
 
       <div className={hideNav ? '' : 'pb-24'}>
         <Outlet />

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogOut, Info, Users } from 'lucide-react'
+import { sileo } from 'sileo'
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
@@ -62,7 +63,6 @@ export default function Profile() {
 
   const [loading, setLoading] = useState(true)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [saveStatus, setSaveStatus] = useState(null)
   const [bodyStats, setBodyStats] = useState([])
   const [statWeight, setStatWeight] = useState('')
   const [statDate, setStatDate] = useState(todayISO())
@@ -108,7 +108,6 @@ export default function Profile() {
   }
 
   async function onSubmit(values) {
-    setSaveStatus(null)
     const clean = {}
     if (values.name !== undefined && values.name !== '') clean.name = values.name
     if (values.birth_date !== undefined && values.birth_date !== '') clean.birth_date = values.birth_date
@@ -120,8 +119,8 @@ export default function Profile() {
     if (values.goal !== undefined && values.goal !== '') clean.goal = values.goal
 
     const { error } = await updateProfile(clean)
-    if (error) setSaveStatus({ type: 'error', msg: error.message })
-    else setSaveStatus({ type: 'success', msg: 'Perfil guardado correctamente.' })
+    if (error) sileo.error({ title: 'Error al guardar', description: error.message })
+    else sileo.success({ title: 'Perfil guardado correctamente.' })
   }
 
   async function handleAddStat(e) {
@@ -262,16 +261,6 @@ export default function Profile() {
                   ))}
                 </select>
               </div>
-
-              {saveStatus && (
-                <p className={`text-sm px-3.5 py-2.5 rounded-xl border ${
-                  saveStatus.type === 'success'
-                    ? 'text-accent bg-accent/10 border-accent/25'
-                    : 'text-red-400 bg-red-500/10 border-red-500/20'
-                }`}>
-                  {saveStatus.msg}
-                </p>
-              )}
 
               <button type="submit" disabled={isSubmitting} className="btn-accent w-full py-3 text-sm">
                 {isSubmitting ? 'Guardando…' : 'Guardar perfil'}

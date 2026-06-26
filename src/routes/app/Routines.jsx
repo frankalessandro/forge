@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles } from 'lucide-react'
+import { sileo } from 'sileo'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useProfile } from '../../hooks/useProfile'
 import { levelFromActivity, splitLabel, GOAL_LABELS } from '../../utils/routineTemplates'
@@ -70,7 +71,6 @@ export default function Routines() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [generating, setGenerating] = useState(false)
-  const [genMsg, setGenMsg] = useState(null)
   const [profile, setProfile] = useState(null)
 
   useEffect(() => {
@@ -94,12 +94,11 @@ export default function Routines() {
   }, [getPublicRoutines, getUserRoutines, getProfile])
 
   const handleGenerate = async () => {
-    setGenMsg(null)
     setGenerating(true)
     try {
       const { data: profile } = await getProfile()
       if (!profile?.goal) {
-        setGenMsg({ type: 'error', text: 'Primero define tu objetivo en tu perfil.' })
+        sileo.error({ title: 'Primero define tu objetivo en tu perfil.' })
         return
       }
       const created = await generateForGoal({
@@ -109,12 +108,11 @@ export default function Routines() {
       })
       const fresh = await getUserRoutines()
       setUserRoutines(fresh)
-      setGenMsg({
-        type: 'success',
-        text: `Listo: se generaron ${created.length} ${created.length === 1 ? 'rutina' : 'rutinas'} según tu objetivo.`,
+      sileo.success({
+        title: `Se ${created.length === 1 ? 'generó 1 rutina' : `generaron ${created.length} rutinas`} según tu objetivo.`,
       })
     } catch (err) {
-      setGenMsg({ type: 'error', text: err.message })
+      sileo.error({ title: 'Error al generar rutinas', description: err.message })
     } finally {
       setGenerating(false)
     }
@@ -171,18 +169,6 @@ export default function Routines() {
               )}
             </div>
           </div>
-
-          {genMsg && (
-            <p
-              className={`text-sm px-3.5 py-2.5 rounded-xl border mt-4 ${
-                genMsg.type === 'success'
-                  ? 'text-accent bg-accent/10 border-accent/25'
-                  : 'text-red-400 bg-red-500/10 border-red-500/20'
-              }`}
-            >
-              {genMsg.text}
-            </p>
-          )}
 
           <button
             onClick={handleGenerate}
