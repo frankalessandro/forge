@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,12 +6,12 @@ import { z } from 'zod'
 import { LogOut, Info, Users, Camera } from 'lucide-react'
 import { useConfirm } from '../../hooks/useConfirm'
 import { sileo } from 'sileo'
-import { ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../hooks/useProfile'
 import PageHeader from '../../components/ui/PageHeader'
 import Sheet from '../../components/ui/Sheet'
 import AchievementsPanel from '../../components/features/AchievementsPanel'
+const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 import {
   GENDERS,
   ACTIVITY_LEVELS,
@@ -403,17 +403,9 @@ export default function Profile() {
               {statError && <p className="text-xs text-red-400">{statError}</p>}
 
               {chartData.length > 1 && (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#71717a' }} stroke="#2a2a31" />
-                    <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#71717a' }} width={36} stroke="#2a2a31" />
-                    <Tooltip
-                      contentStyle={{ background: '#17171b', border: '1px solid #2a2a31', borderRadius: 12, color: '#fafafa' }}
-                      labelStyle={{ color: '#a1a1aa' }}
-                    />
-                    <Line type="monotone" dataKey="weight" stroke="#a3e635" dot={false} strokeWidth={2.5} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<div className="h-[200px] card animate-pulse" />}>
+                  <ProgressChart data={chartData} dataKey="weight" height={200} />
+                </Suspense>
               )}
 
               {bodyStats.length > 0 ? (
