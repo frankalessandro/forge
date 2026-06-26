@@ -7,6 +7,7 @@ import { useRestTimer } from '../../../hooks/useRestTimer'
 import { useAchievements } from '../../../hooks/useAchievements'
 import { sileo } from 'sileo'
 import { iconFor } from '../../../utils/achievementIcons'
+import { useConfirm } from '../../../hooks/useConfirm'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 
 const PERSIST_DELAY = 600
@@ -260,6 +261,7 @@ export default function Active() {
   } = useWorkout()
   const restTimer = useRestTimer()
   const { checkAndUnlock } = useAchievements()
+  const { confirm, modal } = useConfirm()
 
   const [showPicker, setShowPicker] = useState(false)
   const [lastPerfs, setLastPerfs] = useState({})
@@ -376,7 +378,14 @@ export default function Active() {
   }
 
   const handleCancel = async () => {
-    if (!window.confirm('¿Cancelar el entrenamiento? Se perderán todos los datos.')) return
+    const ok = await confirm({
+      title: '¿Cancelar el entrenamiento?',
+      description: 'Se perderán todos los datos registrados en esta sesión.',
+      confirmLabel: 'Cancelar entreno',
+      cancelLabel: 'Seguir entrenando',
+      danger: true,
+    })
+    if (!ok) return
     Object.values(persistTimers.current).forEach(clearTimeout)
     persistTimers.current = {}
     restTimer.skip()
@@ -388,6 +397,7 @@ export default function Active() {
 
   return (
     <div className="min-h-screen bg-ink-950 pb-28">
+      {modal}
       <header className="bg-ink-900 border-b border-ink-800 px-5 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <p className="display text-base text-zinc-100">Entreno activo</p>
