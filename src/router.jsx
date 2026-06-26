@@ -26,9 +26,13 @@ async function redirectIfAuth() {
   if (session) throw redirect('/app/dashboard')
   return null
 }
+async function rootRedirect() {
+  const { data: { session } } = await supabase.auth.getSession()
+  throw redirect(session ? '/app/dashboard' : '/login')
+}
 
 export const router = createBrowserRouter([
-  { path: '/', loader: () => redirect('/app/dashboard') },
+  { path: '/', loader: rootRedirect },
   { path: '/login', loader: redirectIfAuth, element: <Login /> },
   { path: '/register', loader: redirectIfAuth, element: <Register /> },
   {
