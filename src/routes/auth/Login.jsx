@@ -81,7 +81,6 @@ export default function Login() {
         <Divider />
 
         <OAuthButton
-          provider="google"
           label="Continuar con Google"
           loading={oauthLoading === 'google'}
           disabled={isSubmitting || oauthLoading !== null}
@@ -99,7 +98,7 @@ export default function Login() {
   )
 }
 
-export function OAuthButton({ provider, label, loading, disabled, onClick }) {
+export function OAuthButton({ label, loading, disabled, onClick }) {
   return (
     <button
       type="button"
@@ -109,10 +108,8 @@ export function OAuthButton({ provider, label, loading, disabled, onClick }) {
     >
       {loading ? (
         <span className="w-4 h-4 rounded-full border-2 border-zinc-500 border-t-zinc-200 animate-spin shrink-0" />
-      ) : provider === 'google' ? (
-        <GoogleIcon />
       ) : (
-        <AppleIcon />
+        <GoogleIcon />
       )}
       {loading ? 'Conectando…' : label}
     </button>

@@ -6,7 +6,6 @@ import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
 import { useAchievements } from '../../../hooks/useAchievements'
 import { sileo } from 'sileo'
-import { iconFor } from '../../../utils/achievementIcons'
 import { useConfirm } from '../../../hooks/useConfirm'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 
