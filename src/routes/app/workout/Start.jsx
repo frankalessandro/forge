@@ -89,7 +89,7 @@ export default function Start() {
           ) : routines.length === 0 ? (
             <div className="card px-6 py-10 text-center">
               <Dumbbell size={32} className="mx-auto text-zinc-600 mb-3" />
-              <p className="display text-sm text-zinc-300">Todavía no hay rutinas</p>
+              <p className="display text-sm text-zinc-300">Aún no hay rutinas</p>
               <button onClick={() => navigate('/app/routines/new')} className="text-sm text-accent hover:text-accent-bright mt-1">
                 Crear una rutina
               </button>

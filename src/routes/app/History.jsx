@@ -23,7 +23,7 @@ function calcVolume(sets) {
 
 function formatDay(isoStr) {
   const d = new Date(isoStr)
-  return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+  return d.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 function formatHour(isoStr) {
@@ -119,7 +119,7 @@ export default function History() {
                 {stats && (
                   <>
                     <Metric value={stats.exerciseCount} label="ejerc" />
-                    <Metric value={stats.volume > 0 ? `${stats.volume.toLocaleString('es-AR')}` : '—'} label="kg" />
+                    <Metric value={stats.volume > 0 ? `${stats.volume.toLocaleString('es')}` : '—'} label="kg" />
                   </>
                 )}
               </div>
