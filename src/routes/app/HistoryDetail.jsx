@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Trophy } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Trophy, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/ui/PageHeader'
 import Stat from '../../components/ui/Stat'
@@ -30,6 +30,7 @@ const SET_TYPE_LABEL = { normal: null, warmup: 'Calent.', dropset: 'Dropset', fa
 const SET_TYPE_COLOR = { warmup: 'text-amber-300', dropset: 'text-fuchsia-300', failure: 'text-red-300' }
 
 export function SessionDetail({ title, back, sessionId, hero, cta }) {
+  const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [groupedSets, setGroupedSets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +56,7 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
       const map = new Map()
       for (const s of sets ?? []) {
         const name = s.exercises?.name ?? 'Ejercicio'
-        if (!map.has(s.exercise_id)) map.set(s.exercise_id, { name, sets: [] })
+        if (!map.has(s.exercise_id)) map.set(s.exercise_id, { exerciseId: s.exercise_id, name, sets: [] })
         map.get(s.exercise_id).sets.push(s)
       }
       setSession(sess)
@@ -111,10 +112,16 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
                   const best = bestSet(group.sets)
                   return (
                     <div key={group.name} className="card p-4">
-                      <div className="flex items-start justify-between mb-3">
+                      <button
+                        onClick={() => navigate(`/app/exercises/${group.exerciseId}`)}
+                        className="flex items-center justify-between w-full mb-3 text-left"
+                      >
                         <h3 className="display text-sm text-zinc-100">{group.name}</h3>
-                        <span className="eyebrow">{group.sets.length} {group.sets.length === 1 ? 'serie' : 'series'}</span>
-                      </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="eyebrow">{group.sets.length} {group.sets.length === 1 ? 'serie' : 'series'}</span>
+                          <ChevronRight size={14} className="text-zinc-600" />
+                        </div>
+                      </button>
 
                       <div className="space-y-1 mb-1">
                         {group.sets.map((s, i) => {

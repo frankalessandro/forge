@@ -111,12 +111,15 @@ export default function RoutineDetail() {
                   <span className="stat-num text-lg text-zinc-700 w-6 shrink-0">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => navigate(`/app/exercises/${re.exercise_id}`)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <p className="font-medium text-zinc-100 truncate">{re.exercises?.name}</p>
                     <p className="text-xs text-zinc-500 mt-0.5">
                       {re.sets} × {re.reps} · {re.rest_seconds}s descanso
                     </p>
-                  </div>
+                  </button>
                   {re.exercises?.muscle_groups?.name && (
                     <span className="chip-muted shrink-0">{re.exercises.muscle_groups.name}</span>
                   )}

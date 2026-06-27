@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer } from 'lucide-react'
+import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer, Info } from 'lucide-react'
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
@@ -158,6 +158,7 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
 const ExerciseCard = memo(function ExerciseCard({
   exercise, lastPerf, onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
 }) {
+  const navigate = useNavigate()
   const lastSet = exercise.sets[exercise.sets.length - 1]
   const handleAddSet = () =>
     onAddSet(exercise.exerciseId, {
@@ -170,6 +171,9 @@ const ExerciseCard = memo(function ExerciseCard({
     <div className="card p-4">
       <div className="flex items-start gap-2 mb-3">
         <h3 className="display text-sm text-zinc-100 flex-1 min-w-0">{exercise.name}</h3>
+        <button onClick={() => navigate(`/app/exercises/${exercise.exerciseId}`)} className="text-zinc-600 hover:text-accent transition-colors p-1 -mt-1">
+          <Info size={16} />
+        </button>
         <button onClick={() => onDeleteExercise(exercise.exerciseId)} className="text-zinc-600 hover:text-red-400 transition-colors p-1 -mr-1 -mt-1">
           <Trash2 size={16} />
         </button>
