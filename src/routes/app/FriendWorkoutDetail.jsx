@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trophy, ChevronRight } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
 import Stat from '../../components/ui/Stat'
 
@@ -29,48 +29,56 @@ function bestSet(sets) {
 const SET_TYPE_LABEL = { normal: null, warmup: 'Calent.', dropset: 'Dropset', failure: 'Fallo' }
 const SET_TYPE_COLOR = { warmup: 'text-amber-300', dropset: 'text-fuchsia-300', failure: 'text-red-300' }
 
-export function SessionDetail({ title, back, sessionId, hero, cta }) {
+export default function FriendWorkoutDetail() {
+  const { userId, sessionId } = useParams()
   const navigate = useNavigate()
+  const { getFriendSessionSets } = useFriends()
+
   const [session, setSession] = useState(null)
   const [groupedSets, setGroupedSets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!sessionId) return
+    let cancelled = false
     async function load() {
-      const { data: sess, error: sessErr } = await supabase
-        .from('workout_sessions')
-        .select('id, started_at, finished_at, notes')
-        .eq('id', sessionId)
-        .single()
-      if (sessErr) { setError(sessErr.message); setLoading(false); return }
+      try {
+        const rows = await getFriendSessionSets(userId, sessionId)
+        if (cancelled) return
 
-      const { data: sets, error: setsErr } = await supabase
-        .from('workout_sets')
-        .select('id, exercise_id, set_number, reps, weight_kg, set_type, completed_at, exercises(name)')
-        .eq('session_id', sessionId)
-        .order('set_number')
-      if (setsErr) { setError(setsErr.message); setLoading(false); return }
+        if (!rows.length) {
+          setLoading(false)
+          return
+        }
 
-      const map = new Map()
-      for (const s of sets ?? []) {
-        const name = s.exercises?.name ?? 'Ejercicio'
-        if (!map.has(s.exercise_id)) map.set(s.exercise_id, { exerciseId: s.exercise_id, name, sets: [] })
-        map.get(s.exercise_id).sets.push(s)
+        const first = rows[0]
+        setSession({
+          started_at: first.started_at,
+          finished_at: first.finished_at,
+          notes: first.notes,
+        })
+
+        const map = new Map()
+        for (const r of rows) {
+          if (!map.has(r.exercise_id)) map.set(r.exercise_id, { exerciseId: r.exercise_id, name: r.exercise_name, sets: [] })
+          map.get(r.exercise_id).sets.push(r)
+        }
+        setGroupedSets([...map.values()])
+      } catch (err) {
+        if (!cancelled) setError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setSession(sess)
-      setGroupedSets([...map.values()])
-      setLoading(false)
     }
     load()
-  }, [sessionId])
+    return () => { cancelled = true }
+  }, [userId, sessionId, getFriendSessionSets])
 
   const totalVolume = calcVolume(groupedSets.flatMap((g) => g.sets))
 
   return (
     <div className="min-h-screen bg-ink-950">
-      <PageHeader title={title} back={back} />
+      <PageHeader title="Entrenamiento" back={`/app/u/${userId}/workouts`} />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-6">
         {loading && (
@@ -80,11 +88,12 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
           </div>
         )}
 
-        {error && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+        )}
 
         {!loading && session && (
           <>
-            {hero}
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 value={session.finished_at ? formatDuration(session.started_at, session.finished_at) : '—'}
@@ -128,7 +137,7 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
                           const typeLabel = SET_TYPE_LABEL[s.set_type]
                           const typeColor = SET_TYPE_COLOR[s.set_type] ?? ''
                           return (
-                            <div key={s.id} className="flex items-center gap-3 text-sm">
+                            <div key={s.set_id} className="flex items-center gap-3 text-sm">
                               <span className="w-5 text-center stat-num text-xs text-zinc-600 shrink-0">{i + 1}</span>
                               <span className="text-zinc-200 font-medium tabular-nums">{s.weight_kg ?? 0} kg × {s.reps ?? 0}</span>
                               {typeLabel && <span className={`text-xs ${typeColor}`}>{typeLabel}</span>}
@@ -148,16 +157,9 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
                 })}
               </div>
             )}
-
-            {cta}
           </>
         )}
       </main>
     </div>
   )
-}
-
-export default function HistoryDetail() {
-  const { sessionId } = useParams()
-  return <SessionDetail title="Entrenamiento" back="/app/history" sessionId={sessionId} />
 }

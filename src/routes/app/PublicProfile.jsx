@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Flame, Dumbbell, Layers, Trophy, Lock } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Flame, Dumbbell, Layers, Trophy, Lock, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
@@ -39,6 +39,7 @@ function formatVolume(kg) {
 
 export default function PublicProfile() {
   const { userId } = useParams()
+  const navigate = useNavigate()
   const { getFriendProfile } = useFriends()
   const [friend, setFriend] = useState(null)
   const [me, setMe] = useState(null)
@@ -128,6 +129,18 @@ export default function PublicProfile() {
                 <p className="eyebrow mt-1">Logros</p>
               </div>
             </div>
+
+            {/* Historial de entrenamientos */}
+            <button
+              onClick={() => navigate(`/app/u/${userId}/workouts`)}
+              className="w-full card card-hover flex items-center justify-between px-5 py-4"
+            >
+              <div className="flex items-center gap-3">
+                <Dumbbell size={18} className="text-accent" />
+                <span className="display text-sm text-zinc-100">Ver entrenamientos</span>
+              </div>
+              <ChevronRight size={16} className="text-zinc-600" />
+            </button>
 
             {/* Comparación */}
             {me && (

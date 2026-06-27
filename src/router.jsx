@@ -25,6 +25,8 @@ const History = lazy(() => import('./routes/app/History'))
 const HistoryDetail = lazy(() => import('./routes/app/HistoryDetail'))
 const Friends = lazy(() => import('./routes/app/Friends'))
 const PublicProfile = lazy(() => import('./routes/app/PublicProfile'))
+const FriendWorkouts = lazy(() => import('./routes/app/FriendWorkouts'))
+const FriendWorkoutDetail = lazy(() => import('./routes/app/FriendWorkoutDetail'))
 const Onboarding = lazy(() => import('./routes/app/Onboarding'))
 
 function page(node) {
@@ -93,6 +95,8 @@ export const router = createBrowserRouter([
           { path: 'streak', element: <Streak /> },
           { path: 'friends', element: <Friends /> },
           { path: 'u/:userId', element: <PublicProfile /> },
+          { path: 'u/:userId/workouts', element: <FriendWorkouts /> },
+          { path: 'u/:userId/workouts/:sessionId', element: <FriendWorkoutDetail /> },
           { path: 'history', element: <History /> },
           { path: 'history/:sessionId', element: <HistoryDetail /> },
         ],
