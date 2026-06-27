@@ -2,16 +2,20 @@ import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
 
+// Ejercicios con logros de categoría específica
+const EXERCISE_CATEGORY_MAP = {
+  bench:    'Bench Press',
+  squat:    'Barbell Squat',
+  deadlift: 'Deadlift',
+}
+
 function toDateStr(date) {
   return new Date(date).toISOString().slice(0, 10)
 }
 
-// Racha máxima de días consecutivos a partir de un set de fechas (YYYY-MM-DD).
 function longestStreak(dateStrings) {
   const days = [...new Set(dateStrings)].sort()
-  let best = 0
-  let run = 0
-  let prev = null
+  let best = 0, run = 0, prev = null
   for (const d of days) {
     if (prev !== null) {
       const diff = (new Date(d) - new Date(prev)) / 86400000
@@ -25,14 +29,17 @@ function longestStreak(dateStrings) {
   return best
 }
 
-// La métrica que mide cada categoría de logro.
-function valueForCategory(category, stats) {
+export function valueForCategory(category, stats) {
   switch (category) {
-    case 'streak': return stats.maxStreak
+    case 'streak':   return stats.maxStreak
     case 'workouts': return stats.totalWorkouts
-    case 'volume': return stats.totalVolume
+    case 'volume':   return stats.totalVolume
     case 'strength': return stats.maxSetWeight
-    default: return 0
+    case 'bench':    return stats.exerciseMaxWeights?.bench    ?? 0
+    case 'squat':    return stats.exerciseMaxWeights?.squat    ?? 0
+    case 'deadlift': return stats.exerciseMaxWeights?.deadlift ?? 0
+    case 'prs':      return stats.totalPRs ?? 0
+    default:         return 0
   }
 }
 
@@ -56,7 +63,6 @@ export function useAchievements() {
     return data ?? []
   }, [])
 
-  // Calcula las métricas de gamificación del usuario a partir de sus sesiones.
   const getStats = useCallback(async () => {
     const userId = getCurrentUserId()
 
@@ -73,14 +79,28 @@ export function useAchievements() {
       maxSetWeight: 0,
       maxStreak: 0,
       currentStreak: 0,
+      exerciseMaxWeights: { bench: 0, squat: 0, deadlift: 0 },
+      totalPRs: 0,
     }
 
     if (list.length > 0) {
       stats.maxStreak = longestStreak(list.map((s) => toDateStr(s.started_at)))
 
+      // Obtener IDs de los ejercicios con categoría específica
+      const { data: namedExercises } = await supabase
+        .from('exercises')
+        .select('id, name')
+        .in('name', Object.values(EXERCISE_CATEGORY_MAP))
+
+      const exerciseIdToCat = {}
+      for (const e of namedExercises ?? []) {
+        const cat = Object.entries(EXERCISE_CATEGORY_MAP).find(([, n]) => n === e.name)?.[0]
+        if (cat) exerciseIdToCat[e.id] = cat
+      }
+
       const { data: sets } = await supabase
         .from('workout_sets')
-        .select('reps, weight_kg, set_type, session_id')
+        .select('reps, weight_kg, set_type, session_id, exercise_id')
         .in('session_id', list.map((s) => s.id))
 
       for (const s of sets ?? []) {
@@ -89,9 +109,12 @@ export function useAchievements() {
         const reps = Number(s.reps) || 0
         stats.totalVolume += w * reps
         if (w > stats.maxSetWeight) stats.maxSetWeight = w
+
+        const cat = exerciseIdToCat[s.exercise_id]
+        if (cat && w > stats.exerciseMaxWeights[cat]) stats.exerciseMaxWeights[cat] = w
       }
 
-      // Racha actual (hasta hoy o ayer).
+      // Racha actual (hasta hoy o ayer)
       const dates = new Set(list.map((s) => toDateStr(s.started_at)))
       const today = toDateStr(new Date())
       const yesterday = toDateStr(new Date(Date.now() - 86400000))
@@ -105,13 +128,80 @@ export function useAchievements() {
       }
     }
 
+    const { count } = await supabase
+      .from('personal_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+    stats.totalPRs = count ?? 0
+
     return stats
   }, [])
 
-  // Evalúa el catálogo contra las métricas, inserta los logros recién
-  // desbloqueados y devuelve esos logros (para el toast).
+  // Detecta PRs nuevos en el historial completo del usuario e inserta los que falten.
+  const detectAndLogPRs = useCallback(async () => {
+    const userId = getCurrentUserId()
+
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select('id')
+      .eq('user_id', userId)
+      .not('finished_at', 'is', null)
+
+    const sessionIds = (sessions ?? []).map((s) => s.id)
+    if (sessionIds.length === 0) return
+
+    const { data: sets } = await supabase
+      .from('workout_sets')
+      .select('weight_kg, set_type, session_id, exercise_id')
+      .in('session_id', sessionIds)
+      .not('weight_kg', 'is', null)
+      .gt('weight_kg', 0)
+
+    // Máximo por ejercicio a partir de los sets
+    const setMaxByExercise = {}
+    for (const s of sets ?? []) {
+      if (s.set_type === 'warmup' || !s.exercise_id) continue
+      const w = Number(s.weight_kg)
+      if (!setMaxByExercise[s.exercise_id] || w > setMaxByExercise[s.exercise_id].weight) {
+        setMaxByExercise[s.exercise_id] = { weight: w, sessionId: s.session_id }
+      }
+    }
+
+    const exerciseIds = Object.keys(setMaxByExercise)
+    if (exerciseIds.length === 0) return
+
+    // PRs ya registrados
+    const { data: stored } = await supabase
+      .from('personal_records')
+      .select('exercise_id, weight_kg')
+      .eq('user_id', userId)
+      .in('exercise_id', exerciseIds)
+
+    const storedMax = {}
+    for (const r of stored ?? []) {
+      const w = Number(r.weight_kg)
+      if (!storedMax[r.exercise_id] || w > storedMax[r.exercise_id]) storedMax[r.exercise_id] = w
+    }
+
+    // Insertar PRs nuevos
+    const newPRs = []
+    for (const [exerciseId, data] of Object.entries(setMaxByExercise)) {
+      if (data.weight > (storedMax[exerciseId] ?? 0)) {
+        newPRs.push({ user_id: userId, exercise_id: exerciseId, weight_kg: data.weight, session_id: data.sessionId })
+      }
+    }
+
+    if (newPRs.length > 0) {
+      await supabase.from('personal_records').insert(newPRs)
+    }
+  }, [])
+
   const checkAndUnlock = useCallback(async () => {
     const userId = getCurrentUserId()
+
+    // Detectar PRs antes de evaluar logros de la categoría 'prs'
+    await detectAndLogPRs()
+
     const [catalog, unlocked, stats] = await Promise.all([getCatalog(), getUnlocked(), getStats()])
 
     const have = new Set(unlocked.map((u) => u.achievement_id))
@@ -126,7 +216,7 @@ export function useAchievements() {
       if (error) throw error
     }
     return newly
-  }, [getCatalog, getUnlocked, getStats])
+  }, [getCatalog, getUnlocked, getStats, detectAndLogPRs])
 
-  return { getCatalog, getUnlocked, getStats, checkAndUnlock, valueForCategory }
+  return { getCatalog, getUnlocked, getStats, checkAndUnlock, detectAndLogPRs }
 }
