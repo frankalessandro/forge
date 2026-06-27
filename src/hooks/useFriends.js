@@ -51,5 +51,17 @@ export function useFriends() {
     return data // objeto público o null si no hay permiso
   }, [])
 
-  return { searchUsers, listFriends, listRequests, sendRequest, acceptRequest, removeFriendship, getFriendProfile }
+  const getFriendWorkouts = useCallback(async (userId) => {
+    const { data, error } = await supabase.rpc('friend_workouts', { target: userId })
+    if (error) throw error
+    return data ?? []
+  }, [])
+
+  const getFriendSessionSets = useCallback(async (userId, sessionId) => {
+    const { data, error } = await supabase.rpc('friend_session_sets', { target: userId, p_session_id: sessionId })
+    if (error) throw error
+    return data ?? []
+  }, [])
+
+  return { searchUsers, listFriends, listRequests, sendRequest, acceptRequest, removeFriendship, getFriendProfile, getFriendWorkouts, getFriendSessionSets }
 }
