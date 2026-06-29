@@ -57,20 +57,23 @@ export default function ExerciseDetail() {
                 <p className="text-xs text-zinc-600 -mt-2 mb-3 uppercase tracking-wide">{exercise.name}</p>
               )}
               <div className="flex flex-wrap gap-2">
-                {exercise.category && <span className="chip-muted">{exercise.category}</span>}
+                {exercise.body_part && <span className="chip-muted capitalize">{exercise.body_part}</span>}
+                {exercise.target && <span className="chip-accent capitalize">{exercise.target}</span>}
                 {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
                 {exercise.equipment && (
-                  <span className="chip-muted"><Dumbbell size={12} className="inline mr-0.5" />{exercise.equipment}</span>
+                  <span className="chip-muted capitalize"><Dumbbell size={12} className="inline mr-0.5" />{exercise.equipment}</span>
                 )}
               </div>
             </div>
 
             <ExerciseMedia imageUrl={exercise.image_url} videoUrl={exercise.video_url} alt={exercise.name} />
 
-            {exercise.description && (
+            {(exercise.description || exercise.instructions_en) && (
               <div>
                 <h2 className="section-title mb-2">Descripción</h2>
-                <p className="text-zinc-300 leading-relaxed">{exercise.description}</p>
+                <p className="text-zinc-300 leading-relaxed">
+                  {exercise.description || exercise.instructions_en}
+                </p>
               </div>
             )}
 

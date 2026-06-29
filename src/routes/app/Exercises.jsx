@@ -1,13 +1,38 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Dumbbell } from 'lucide-react'
-import { useExercises, useMuscleGroups } from '../../hooks/useExercises'
+import { useExercises } from '../../hooks/useExercises'
 import { useExerciseStore } from '../../stores/exerciseStore'
 import PageHeader from '../../components/ui/PageHeader'
 
-const EQUIPMENT_OPTIONS = [
-  'Barbell', 'Dumbbell', 'Kettlebell', 'Machine', 'Cable', 'Resistance Band', 'Bodyweight', 'Other',
+const BODY_PARTS = [
+  { value: 'back',       label: 'Espalda' },
+  { value: 'chest',      label: 'Pecho' },
+  { value: 'shoulders',  label: 'Hombros' },
+  { value: 'upper arms', label: 'Brazos' },
+  { value: 'lower arms', label: 'Antebrazos' },
+  { value: 'upper legs', label: 'Piernas' },
+  { value: 'lower legs', label: 'Pantorrillas' },
+  { value: 'waist',      label: 'Core' },
+  { value: 'neck',       label: 'Cuello' },
+  { value: 'cardio',     label: 'Cardio' },
 ]
+
+const EQUIPMENT_OPTIONS = [
+  'barbell', 'dumbbell', 'kettlebell', 'machine', 'cable',
+  'resistance band', 'body weight', 'leverage machine',
+]
+
+const EQUIPMENT_LABELS = {
+  'barbell': 'Barra',
+  'dumbbell': 'Mancuernas',
+  'kettlebell': 'Kettlebell',
+  'machine': 'Máquina',
+  'cable': 'Polea',
+  'resistance band': 'Banda',
+  'body weight': 'Peso corporal',
+  'leverage machine': 'Máquina palanca',
+}
 
 function Pill({ label, active, onClick }) {
   return (
@@ -23,7 +48,7 @@ function Pill({ label, active, onClick }) {
 }
 
 export default function Exercises() {
-  const { muscleGroupId, equipment, search, setMuscleGroup, setEquipment, setSearch } = useExerciseStore()
+  const { bodyPart, equipment, search, setBodyPart, setEquipment, setSearch } = useExerciseStore()
   const [searchInput, setSearchInput] = useState(search)
 
   useEffect(() => {
@@ -31,8 +56,7 @@ export default function Exercises() {
     return () => clearTimeout(t)
   }, [searchInput, setSearch])
 
-  const { exercises, loading } = useExercises({ muscleGroupId, equipment, search })
-  const { muscleGroups } = useMuscleGroups()
+  const { exercises, loading } = useExercises({ bodyPart, equipment, search })
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -50,31 +74,39 @@ export default function Exercises() {
           />
         </div>
 
-        {muscleGroups.length > 0 && (
-          <div className="mb-3">
-            <p className="section-title mb-2">Grupo muscular</p>
-            <div className="flex gap-2 flex-wrap">
-              <Pill label="Todos" active={muscleGroupId === null} onClick={() => setMuscleGroup(null)} />
-              {muscleGroups.map((mg) => (
-                <Pill key={mg.id} label={mg.name} active={muscleGroupId === mg.id} onClick={() => setMuscleGroup(muscleGroupId === mg.id ? null : mg.id)} />
-              ))}
-            </div>
+        <div className="mb-3">
+          <p className="section-title mb-2">Zona muscular</p>
+          <div className="flex gap-2 flex-wrap">
+            <Pill label="Todos" active={bodyPart === null} onClick={() => setBodyPart(null)} />
+            {BODY_PARTS.map((bp) => (
+              <Pill
+                key={bp.value}
+                label={bp.label}
+                active={bodyPart === bp.value}
+                onClick={() => setBodyPart(bodyPart === bp.value ? null : bp.value)}
+              />
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="mb-6">
           <p className="section-title mb-2">Equipamiento</p>
           <div className="flex gap-2 flex-wrap">
             <Pill label="Todos" active={equipment === null} onClick={() => setEquipment(null)} />
             {EQUIPMENT_OPTIONS.map((eq) => (
-              <Pill key={eq} label={eq} active={equipment === eq} onClick={() => setEquipment(equipment === eq ? null : eq)} />
+              <Pill
+                key={eq}
+                label={EQUIPMENT_LABELS[eq] ?? eq}
+                active={equipment === eq}
+                onClick={() => setEquipment(equipment === eq ? null : eq)}
+              />
             ))}
           </div>
         </div>
 
         {loading ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-20 card animate-pulse" />)}
+            {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-24 card animate-pulse" />)}
           </div>
         ) : exercises.length === 0 ? (
           <div className="text-center py-16 text-zinc-500">
@@ -85,11 +117,25 @@ export default function Exercises() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {exercises.map((ex) => (
-              <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover p-4">
-                <p className="display text-sm text-zinc-100">{ex.name_es ?? ex.name}</p>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {ex.muscle_groups && <span className="chip-muted">{ex.muscle_groups.name}</span>}
-                  {ex.equipment && <span className="chip-muted">{ex.equipment}</span>}
+              <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover flex gap-3 p-3 items-center">
+                {ex.image_url ? (
+                  <img
+                    src={ex.image_url}
+                    alt={ex.name}
+                    className="w-16 h-16 rounded-xl object-cover bg-ink-900 shrink-0"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-ink-900 flex items-center justify-center shrink-0">
+                    <Dumbbell size={20} className="text-zinc-700" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="display text-sm text-zinc-100 truncate">{ex.name_es ?? ex.name}</p>
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    {ex.body_part && <span className="chip-muted capitalize">{ex.body_part}</span>}
+                    {ex.equipment && <span className="chip-muted capitalize">{ex.equipment}</span>}
+                  </div>
                 </div>
               </Link>
             ))}

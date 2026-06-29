@@ -17,7 +17,7 @@ function loadCatalog() {
   if (!catalogPromise) {
     catalogPromise = supabase
       .from('exercises')
-      .select('id, name, name_es, category, equipment, image_url, muscle_group_id, muscle_groups(id, name)')
+      .select('id, name, name_es, category, body_part, target, equipment, image_url, video_url, muscle_group_id, muscle_groups(id, name)')
       .order('name')
       .then(({ data, error }) => {
         if (error) {
@@ -50,7 +50,7 @@ function loadMuscleGroups() {
   return muscleGroupsPromise
 }
 
-export function useExercises({ muscleGroupId, equipment, search } = {}) {
+export function useExercises({ bodyPart, equipment, search } = {}) {
   const [all, setAll] = useState(catalogCache)
   const [loading, setLoading] = useState(!catalogCache)
   const [error, setError] = useState(null)
@@ -82,8 +82,9 @@ export function useExercises({ muscleGroupId, equipment, search } = {}) {
     const list = all ?? []
     const term = search?.trim().toLowerCase()
     const eq = equipment?.toLowerCase()
+    const bp = bodyPart?.toLowerCase()
     return list.filter((ex) => {
-      if (muscleGroupId && ex.muscle_group_id !== muscleGroupId) return false
+      if (bp && (ex.body_part ?? '').toLowerCase() !== bp) return false
       if (eq && !(ex.equipment ?? '').toLowerCase().includes(eq)) return false
       if (term) {
         const inName = (ex.name ?? '').toLowerCase().includes(term)
@@ -92,7 +93,7 @@ export function useExercises({ muscleGroupId, equipment, search } = {}) {
       }
       return true
     })
-  }, [all, muscleGroupId, equipment, search])
+  }, [all, bodyPart, equipment, search])
 
   return { exercises, loading, error }
 }
