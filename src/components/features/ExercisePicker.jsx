@@ -1,25 +1,33 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Search, Dumbbell } from 'lucide-react'
-import { useExercises, useMuscleGroups } from '../../hooks/useExercises'
+import { useExercises } from '../../hooks/useExercises'
+
+const BODY_PARTS = [
+  { value: 'back',       label: 'Espalda' },
+  { value: 'chest',      label: 'Pecho' },
+  { value: 'shoulders',  label: 'Hombros' },
+  { value: 'upper arms', label: 'Brazos' },
+  { value: 'lower arms', label: 'Antebrazos' },
+  { value: 'upper legs', label: 'Piernas' },
+  { value: 'lower legs', label: 'Pantorrillas' },
+  { value: 'waist',      label: 'Core' },
+  { value: 'cardio',     label: 'Cardio' },
+]
 
 export default function ExercisePicker({ onSelect, onClose, excludeIds = [] }) {
   const [search, setSearch] = useState('')
-  const [muscleGroupId, setMuscleGroupId] = useState(null)
+  const [bodyPart, setBodyPart] = useState(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const inputRef = useRef(null)
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  useEffect(() => { inputRef.current?.focus() }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 250)
     return () => clearTimeout(t)
   }, [search])
 
-  const { exercises, loading } = useExercises({ muscleGroupId, search: debouncedSearch })
-  const { muscleGroups } = useMuscleGroups()
-
+  const { exercises, loading } = useExercises({ bodyPart, search: debouncedSearch })
   const filtered = exercises.filter((ex) => !excludeIds.includes(ex.id))
 
   return (
@@ -53,24 +61,22 @@ export default function ExercisePicker({ onSelect, onClose, excludeIds = [] }) {
           </div>
         </div>
 
-        {muscleGroups.length > 0 && (
-          <div className="px-5 pb-2 overflow-x-auto">
-            <div className="flex gap-2 min-w-max">
-              <Pill active={muscleGroupId === null} onClick={() => setMuscleGroupId(null)}>Todos</Pill>
-              {muscleGroups.map((mg) => (
-                <Pill key={mg.id} active={muscleGroupId === mg.id} onClick={() => setMuscleGroupId(muscleGroupId === mg.id ? null : mg.id)}>
-                  {mg.name}
-                </Pill>
-              ))}
-            </div>
+        <div className="px-5 pb-2 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            <Pill active={bodyPart === null} onClick={() => setBodyPart(null)}>Todos</Pill>
+            {BODY_PARTS.map((bp) => (
+              <Pill key={bp.value} active={bodyPart === bp.value} onClick={() => setBodyPart(bodyPart === bp.value ? null : bp.value)}>
+                {bp.label}
+              </Pill>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-6">
           {loading && (
             <div className="space-y-2 pt-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 bg-ink-850 rounded-lg animate-pulse" />
+                <div key={i} className="h-14 bg-ink-850 rounded-lg animate-pulse" />
               ))}
             </div>
           )}
@@ -86,12 +92,27 @@ export default function ExercisePicker({ onSelect, onClose, excludeIds = [] }) {
             <ul className="pt-1 divide-y divide-ink-800">
               {filtered.map((ex) => (
                 <li key={ex.id}>
-                  <button onClick={() => onSelect(ex)} className="w-full flex items-center gap-3 py-3 text-left hover:bg-ink-850 transition-colors rounded-lg px-2 -mx-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-100">{ex.name_es ?? ex.name}</p>
-                      {ex.muscle_groups && <p className="text-xs text-zinc-500">{ex.muscle_groups.name}</p>}
+                  <button
+                    onClick={() => onSelect(ex)}
+                    className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-ink-850 transition-colors rounded-lg px-2 -mx-2"
+                  >
+                    {ex.image_url ? (
+                      <img
+                        src={ex.image_url}
+                        alt={ex.name}
+                        className="w-10 h-10 rounded-lg object-cover bg-ink-900 shrink-0"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-ink-900 flex items-center justify-center shrink-0">
+                        <Dumbbell size={14} className="text-zinc-700" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-100 truncate">{ex.name_es ?? ex.name}</p>
+                      {ex.body_part && <p className="text-xs text-zinc-500 capitalize">{ex.body_part}</p>}
                     </div>
-                    {ex.equipment && <span className="chip-muted shrink-0">{ex.equipment}</span>}
+                    {ex.equipment && <span className="chip-muted shrink-0 capitalize">{ex.equipment}</span>}
                   </button>
                 </li>
               ))}
