@@ -4,6 +4,7 @@ import { Trophy, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/ui/PageHeader'
 import Stat from '../../components/ui/Stat'
+import { displayWeight } from '../../utils/weight'
 
 function formatDuration(startedAt, finishedAt) {
   const ms = new Date(finishedAt) - new Date(startedAt)
@@ -17,7 +18,7 @@ function formatDuration(startedAt, finishedAt) {
 }
 
 function calcVolume(sets) {
-  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * displayWeight(s.weight_kg, s.exercises?.equipment), 0)
 }
 
 function bestSet(sets) {
@@ -48,7 +49,7 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
 
       const { data: sets, error: setsErr } = await supabase
         .from('workout_sets')
-        .select('id, exercise_id, set_number, reps, weight_kg, set_type, completed_at, exercises(name)')
+        .select('id, exercise_id, set_number, reps, weight_kg, set_type, completed_at, exercises(name, equipment)')
         .eq('session_id', sessionId)
         .order('set_number')
       if (setsErr) { setError(setsErr.message); setLoading(false); return }

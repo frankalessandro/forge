@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Dumbbell, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/ui/PageHeader'
+import { displayWeight } from '../../utils/weight'
 
 const PAGE_SIZE = 10
 
@@ -18,7 +19,7 @@ function formatDuration(startedAt, finishedAt) {
 }
 
 function calcVolume(sets) {
-  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * displayWeight(s.weight_kg, s.exercises?.equipment), 0)
 }
 
 function formatDay(isoStr) {
@@ -63,7 +64,7 @@ export default function History() {
       if (ids.length > 0) {
         const { data: allSets } = await supabase
           .from('workout_sets')
-          .select('session_id, exercise_id, reps, weight_kg, set_type')
+          .select('session_id, exercise_id, reps, weight_kg, set_type, exercises(equipment)')
           .in('session_id', ids)
 
         const bySession = new Map()

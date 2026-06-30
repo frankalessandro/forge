@@ -8,6 +8,7 @@ import { useAchievements } from '../../../hooks/useAchievements'
 import { sileo } from 'sileo'
 import { useConfirm } from '../../../hooks/useConfirm'
 import ExercisePicker from '../../../components/features/ExercisePicker'
+import { isDumbbell, displayWeight } from '../../../utils/weight'
 
 const PERSIST_DELAY = 600
 
@@ -44,7 +45,7 @@ function calcStats(exercises) {
     for (const s of ex.sets) {
       if (s.completed) {
         completedSets++
-        if (s.set_type !== 'warmup') volume += (s.reps ?? 0) * (s.weight_kg ?? 0)
+        if (s.set_type !== 'warmup') volume += (s.reps ?? 0) * displayWeight(s.weight_kg, ex.equipment)
       }
     }
   }
@@ -265,11 +266,17 @@ const ExerciseCard = memo(function ExerciseCard({
 
           <LastPerf sets={lastPerf} />
 
+          {isDumbbell(exercise.equipment) && (
+            <p className="text-xs text-zinc-500 mb-2 -mt-1">
+              Peso por mancuerna — el total registrado se duplica automáticamente.
+            </p>
+          )}
+
           {exercise.sets.length > 0 && (
             <div className="mb-2">
               <div className="flex items-center gap-1.5 py-1 px-1 eyebrow">
                 <span className="w-5 text-center shrink-0">#</span>
-                <span className="flex-1 min-w-0 text-center">kg</span>
+                <span className="flex-1 min-w-0 text-center">{isDumbbell(exercise.equipment) ? 'kg/manc.' : 'kg'}</span>
                 <span className="flex-1 min-w-0 text-center">reps</span>
                 <span className="shrink-0">tipo</span>
               </div>

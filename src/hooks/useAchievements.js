@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
+import { displayWeight } from '../utils/weight'
 
 // Ejercicios con logros de categoría específica
 const EXERCISE_CATEGORY_MAP = {
@@ -100,14 +101,14 @@ export function useAchievements() {
 
       const { data: sets } = await supabase
         .from('workout_sets')
-        .select('reps, weight_kg, set_type, session_id, exercise_id')
+        .select('reps, weight_kg, set_type, session_id, exercise_id, exercises(equipment)')
         .in('session_id', list.map((s) => s.id))
 
       for (const s of sets ?? []) {
         if (s.set_type === 'warmup') continue
         const w = Number(s.weight_kg) || 0
         const reps = Number(s.reps) || 0
-        stats.totalVolume += w * reps
+        stats.totalVolume += displayWeight(w, s.exercises?.equipment) * reps
         if (w > stats.maxSetWeight) stats.maxSetWeight = w
 
         const cat = exerciseIdToCat[s.exercise_id]

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
+import { displayWeight } from '../utils/weight'
 
 // 1RM estimado con la fórmula de Epley: peso · (1 + reps/30).
 // Con 1 repetición, el 1RM es el propio peso levantado.
@@ -13,7 +14,7 @@ function epley1RM(weight, reps) {
 // Agrupa las series por sesión y calcula, por fecha:
 // peso máximo, volumen total (peso·reps) y 1RM estimado máximo.
 // También extrae los récords personales (PRs) del historial completo.
-function aggregate(rows) {
+function aggregate(rows, equipment) {
   const bySession = new Map()
 
   for (const r of rows) {
@@ -30,7 +31,7 @@ function aggregate(rows) {
       bySession.set(sid, { date: session.started_at, maxWeight: 0, volume: 0, est1RM: 0, maxReps: 0 })
     }
     const agg = bySession.get(sid)
-    agg.volume += weight * reps
+    agg.volume += displayWeight(weight, equipment) * reps
     if (weight > agg.maxWeight) agg.maxWeight = weight
     if (reps > agg.maxReps) agg.maxReps = reps
     const e = epley1RM(weight, reps)
@@ -79,12 +80,15 @@ export function useExerciseHistory(exerciseId) {
       setError(null)
 
       const userId = useAuthStore.getState().user?.id
-      const { data, error: err } = await supabase
-        .from('workout_sets')
-        .select('reps, weight_kg, set_type, session:workout_sessions!inner(id, started_at, finished_at, user_id)')
-        .eq('exercise_id', exerciseId)
-        .eq('session.user_id', userId)
-        .not('session.finished_at', 'is', null)
+      const [{ data, error: err }, { data: exercise }] = await Promise.all([
+        supabase
+          .from('workout_sets')
+          .select('reps, weight_kg, set_type, session:workout_sessions!inner(id, started_at, finished_at, user_id)')
+          .eq('exercise_id', exerciseId)
+          .eq('session.user_id', userId)
+          .not('session.finished_at', 'is', null),
+        supabase.from('exercises').select('equipment').eq('id', exerciseId).maybeSingle(),
+      ])
 
       if (cancelled) return
       if (err) {
@@ -93,7 +97,7 @@ export function useExerciseHistory(exerciseId) {
         return
       }
 
-      const { history: h, prs: p } = aggregate(data ?? [])
+      const { history: h, prs: p } = aggregate(data ?? [], exercise?.equipment)
       setHistory(h)
       setPrs(p)
       setLoading(false)
