@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export const useWorkoutStore = create((set) => ({
   session: null,       // { id, startedAt, notes }
-  exercises: [],       // [{ exerciseId, name, sets: [{ id, reps, weight_kg, set_type, completed, dbId }] }]
+  exercises: [],       // [{ exerciseId, name, equipment, sets: [{ id, reps, weight_kg, set_type, completed, dbId }] }]
   isActive: false,
 
   startSession: (session) =>
@@ -12,7 +12,13 @@ export const useWorkoutStore = create((set) => ({
     set((s) => ({
       exercises: [
         ...s.exercises,
-        { exerciseId: exercise.id, name: exercise.name, imageUrl: exercise.image_url ?? null, sets: [] },
+        {
+          exerciseId: exercise.id,
+          name: exercise.name,
+          imageUrl: exercise.image_url ?? null,
+          equipment: exercise.equipment ?? null,
+          sets: [],
+        },
       ],
     })),
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { buildWeeks, computeStreak, getMonday } from '../../utils/streak'
+import { displayWeight } from '../../utils/weight'
 
 function getMondayOfWeek(date) {
   const d = new Date(date)
@@ -16,7 +17,7 @@ function getMondayOfWeek(date) {
 function calcVolume(sets) {
   return sets
     .filter((s) => s.set_type !== 'warmup')
-    .reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
+    .reduce((acc, s) => acc + (s.reps ?? 0) * displayWeight(s.weight_kg, s.exercises?.equipment), 0)
 }
 
 function greeting() {
@@ -73,7 +74,7 @@ export default function Dashboard() {
         const ids = weekSessions.map((s) => s.id)
         const { data: weekSets } = await supabase
           .from('workout_sets')
-          .select('reps, weight_kg, set_type')
+          .select('reps, weight_kg, set_type, exercises(equipment)')
           .in('session_id', ids)
         weekVolume = calcVolume(weekSets ?? [])
       }

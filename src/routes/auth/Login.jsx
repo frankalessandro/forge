@@ -31,7 +31,7 @@ export default function Login() {
       return
     }
     sileo.success({ title: '¡Bienvenido de vuelta!' })
-    navigate('/app/dashboard')
+    navigate('/')
   }
 
   const handleOAuth = async (provider) => {

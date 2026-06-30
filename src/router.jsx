@@ -44,11 +44,13 @@ function RequireAuth() {
   return <Navigate to="/login" replace />
 }
 
-// Rutas de invitado (login / registro). Si ya hay sesión, al dashboard.
+// Rutas de invitado (login / registro). Si ya hay sesión, al dashboard
+// (o a la encuesta de onboarding si todavía no completó el perfil).
 // El seed síncrono cubre el caso del usuario logueado: nunca flashea el login.
 function GuestOnly() {
   const session = useAuthStore((s) => s.session)
-  if (session) return <Navigate to="/app/dashboard" replace />
+  const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
+  if (session) return <Navigate to={needsOnboarding ? '/app/onboarding' : '/app/dashboard'} replace />
   return <Outlet />
 }
 
