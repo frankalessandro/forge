@@ -107,8 +107,15 @@ export default function Profile() {
       danger: true,
     })
     if (!ok) return
-    await supabase.auth.signOut()
-    navigate('/login')
+    // scope: 'local' limpia la sesión del cliente sin depender de la red para
+    // revocarla en el server. Si eso falla o se cuelga, antes nunca se llegaba
+    // al navigate y la app quedaba colgada en la pantalla de perfil.
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // seguimos igual: lo importante es sacar al usuario de la sesión local
+    }
+    navigate('/login', { replace: true })
   }
 
   const weightNum = Number(profile?.weight_kg) || null
