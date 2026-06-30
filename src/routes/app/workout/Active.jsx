@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Check, X, ChevronDown, Dumbbell, SkipForward, Timer, Info } from 'lucide-react'
+import { Plus, Trash2, Check, X, ChevronDown, ChevronUp, Dumbbell, SkipForward, Clock, Info, GripVertical } from 'lucide-react'
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
@@ -12,6 +12,15 @@ import ExercisePicker from '../../../components/features/ExercisePicker'
 const PERSIST_DELAY = 600
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+function formatClock(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
 function useElapsed(startedAt) {
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
@@ -21,12 +30,11 @@ function useElapsed(startedAt) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [startedAt])
-  const h = Math.floor(elapsed / 3600)
-  const m = Math.floor((elapsed % 3600) / 60)
-  const s = elapsed % 60
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return formatClock(elapsed)
+}
+
+function isExerciseDone(exercise) {
+  return exercise.sets.length > 0 && exercise.sets.every((s) => s.completed)
 }
 
 function calcStats(exercises) {
@@ -50,31 +58,61 @@ const SET_TYPE_STYLES = {
   failure: { row: 'bg-red-400/5', badge: 'bg-red-400/15 text-red-300' },
 }
 
-// ── Rest timer bar ─────────────────────────────────────────────────────────
-function RestTimerBar({ remaining, duration, onSkip, onAdd30 }) {
-  const pct = duration > 0 ? Math.max(0, (remaining / duration) * 100) : 0
-  const m = Math.floor(remaining / 60)
-  const s = remaining % 60
-  const label = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+// ── Per-exercise timer (ticks on its own, doesn't re-render the card) ───────
+function ExerciseTimer({ start, frozen }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (frozen != null || !start) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [start, frozen])
+
+  if (!start) return null
+  const ms = frozen != null ? frozen : now - start
+  return (
+    <span className="flex items-center gap-1 text-xs text-zinc-500 tabular-nums shrink-0">
+      <Clock size={11} />
+      {formatClock(Math.max(0, Math.floor(ms / 1000)))}
+    </span>
+  )
+}
+
+// ── Rest modal ───────────────────────────────────────────────────────────
+function RestModal({ remaining, duration, onSkip, onAdd30 }) {
+  const pct = duration > 0 ? Math.max(0, Math.min(1, remaining / duration)) : 0
+  const circumference = 2 * Math.PI * 54
+  const offset = circumference * (1 - pct)
 
   return (
-    <div className="bg-ink-900 border-b border-ink-800 px-5 py-2.5">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-1.5">
-          <Timer size={14} className="text-accent shrink-0" />
-          <span className="eyebrow flex-1">Descanso</span>
-          <span className="stat-num text-base text-zinc-100">{label}</span>
-          <button onClick={onAdd30} className="text-xs text-zinc-500 hover:text-zinc-100 transition-colors px-1">
-            +30s
-          </button>
-          <button onClick={onSkip} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-100 transition-colors">
-            <SkipForward size={13} />
-            Saltar
-          </button>
-        </div>
-        <div className="h-1 bg-ink-800 rounded-full overflow-hidden">
-          <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
-        </div>
+    <div className="fixed inset-0 z-50 bg-ink-950/95 backdrop-blur-sm flex flex-col items-center justify-center px-6 animate-in">
+      <span className="eyebrow mb-4">Descanso</span>
+      <div className="relative w-56 h-56 flex items-center justify-center mb-10">
+        <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-ink-800)" strokeWidth="6" />
+          <circle
+            cx="60"
+            cy="60"
+            r="54"
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1s linear' }}
+          />
+        </svg>
+        <span className="stat-num text-5xl text-zinc-100">{formatClock(remaining)}</span>
+      </div>
+      <div className="flex gap-3 w-full max-w-xs">
+        <button onClick={onAdd30} className="btn-dark flex-1 py-3 text-sm">
+          +30s
+        </button>
+        <button onClick={onSkip} className="btn-accent flex-1 py-3 text-sm">
+          <SkipForward size={16} />
+          Saltar
+        </button>
       </div>
     </div>
   )
@@ -156,7 +194,9 @@ const SetRow = memo(function SetRow({ exId, setIndex, set, onWeight, onReps, onT
 
 // ── Exercise card (memoizado por ejercicio) ─────────────────────────────────
 const ExerciseCard = memo(function ExerciseCard({
-  exercise, lastPerf, onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
+  exercise, lastPerf, isDone, isCollapsed, timerStart, timerFrozen,
+  onAddSet, onWeight, onReps, onType, onComplete, onDeleteSet, onDeleteExercise,
+  onToggleCollapse, onDragStart,
 }) {
   const navigate = useNavigate()
   const lastSet = exercise.sets[exercise.sets.length - 1]
@@ -167,66 +207,97 @@ const ExerciseCard = memo(function ExerciseCard({
       set_type: lastSet?.set_type ?? 'normal',
     })
 
+  const { completedSets } = calcStats([exercise])
+
   return (
     <div className="card p-4">
-      <div className="flex items-start gap-2 mb-3">
-        <h3 className="display text-sm text-zinc-100 flex-1 min-w-0">{exercise.name}</h3>
+      <div className="flex items-start gap-2 mb-1">
+        <button
+          onPointerDown={(e) => onDragStart(e, exercise.exerciseId)}
+          style={{ touchAction: 'none' }}
+          className="text-zinc-600 hover:text-zinc-300 cursor-grab active:cursor-grabbing p-1 -ml-1 -mt-1 shrink-0"
+        >
+          <GripVertical size={16} />
+        </button>
+
+        <button
+          onClick={() => onToggleCollapse(exercise.exerciseId)}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+        >
+          {isDone && (
+            <span className="bg-accent text-ink-950 rounded-full p-0.5 shrink-0">
+              <Check size={11} strokeWidth={3} />
+            </span>
+          )}
+          <h3 className="display text-sm text-zinc-100 truncate">{exercise.name}</h3>
+        </button>
+
+        <ExerciseTimer start={timerStart} frozen={timerFrozen} />
+
         <button onClick={() => navigate(`/app/exercises/${exercise.exerciseId}`)} className="text-zinc-600 hover:text-accent transition-colors p-1 -mt-1">
           <Info size={16} />
         </button>
         <button onClick={() => onDeleteExercise(exercise.exerciseId)} className="text-zinc-600 hover:text-red-400 transition-colors p-1 -mr-1 -mt-1">
           <Trash2 size={16} />
         </button>
+        <button onClick={() => onToggleCollapse(exercise.exerciseId)} className="text-zinc-600 hover:text-zinc-300 transition-colors p-1 -mt-1">
+          {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
       </div>
 
-      {/* Espacio para la imagen del ejercicio (placeholder si aún no hay) */}
-      {exercise.imageUrl ? (
-        <img
-          src={exercise.imageUrl}
-          alt={exercise.name}
-          className="w-full h-40 object-contain bg-black rounded-xl border border-ink-800 mb-3"
-          loading="lazy"
-        />
+      {isCollapsed ? (
+        <p className="text-xs text-zinc-500 pl-1 mt-2">{completedSets} series completadas</p>
       ) : (
-        <div className="w-full h-40 rounded-xl border border-dashed border-ink-700 bg-ink-850/40 mb-3 flex flex-col items-center justify-center gap-1.5 text-zinc-700">
-          <Dumbbell size={28} strokeWidth={1.5} />
-          <span className="text-xs">Imagen del ejercicio</span>
-        </div>
-      )}
-
-      <LastPerf sets={lastPerf} />
-
-      {exercise.sets.length > 0 && (
-        <div className="mb-2">
-          <div className="flex items-center gap-1.5 py-1 px-1 eyebrow">
-            <span className="w-5 text-center shrink-0">#</span>
-            <span className="flex-1 min-w-0 text-center">kg</span>
-            <span className="flex-1 min-w-0 text-center">reps</span>
-            <span className="shrink-0">tipo</span>
-          </div>
-          {exercise.sets.map((set, i) => (
-            <SetRow
-              key={set.dbId ?? i}
-              exId={exercise.exerciseId}
-              setIndex={i}
-              set={set}
-              onWeight={onWeight}
-              onReps={onReps}
-              onType={onType}
-              onComplete={onComplete}
-              onDelete={onDeleteSet}
+        <div className="mt-3">
+          {exercise.imageUrl ? (
+            <img
+              src={exercise.imageUrl}
+              alt={exercise.name}
+              className="w-full h-40 object-contain bg-black rounded-xl border border-ink-800 mb-3"
+              loading="lazy"
             />
-          ))}
+          ) : (
+            <div className="w-full h-40 rounded-xl border border-dashed border-ink-700 bg-ink-850/40 mb-3 flex flex-col items-center justify-center gap-1.5 text-zinc-700">
+              <Dumbbell size={28} strokeWidth={1.5} />
+              <span className="text-xs">Imagen del ejercicio</span>
+            </div>
+          )}
+
+          <LastPerf sets={lastPerf} />
+
+          {exercise.sets.length > 0 && (
+            <div className="mb-2">
+              <div className="flex items-center gap-1.5 py-1 px-1 eyebrow">
+                <span className="w-5 text-center shrink-0">#</span>
+                <span className="flex-1 min-w-0 text-center">kg</span>
+                <span className="flex-1 min-w-0 text-center">reps</span>
+                <span className="shrink-0">tipo</span>
+              </div>
+              {exercise.sets.map((set, i) => (
+                <SetRow
+                  key={set.dbId ?? i}
+                  exId={exercise.exerciseId}
+                  setIndex={i}
+                  set={set}
+                  onWeight={onWeight}
+                  onReps={onReps}
+                  onType={onType}
+                  onComplete={onComplete}
+                  onDelete={onDeleteSet}
+                />
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={handleAddSet}
+            className="w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-accent border border-dashed border-ink-700 hover:border-accent/40 rounded-lg py-2 transition-colors mt-1"
+          >
+            <Plus size={14} />
+            Agregar serie
+          </button>
         </div>
       )}
-
-      <button
-        onClick={handleAddSet}
-        className="w-full flex items-center justify-center gap-1.5 text-sm text-zinc-500 hover:text-accent border border-dashed border-ink-700 hover:border-accent/40 rounded-lg py-2 transition-colors mt-1"
-      >
-        <Plus size={14} />
-        Agregar serie
-      </button>
     </div>
   )
 })
@@ -239,7 +310,7 @@ function StatsBar({ exercises, elapsed }) {
       <div className="max-w-2xl mx-auto grid grid-cols-3 text-center divide-x divide-ink-800">
         <div>
           <p className="stat-num text-xl text-accent">{elapsed}</p>
-          <p className="eyebrow mt-0.5">tiempo</p>
+          <p className="eyebrow mt-0.5">tiempo total</p>
         </div>
         <div>
           <p className="stat-num text-xl text-zinc-100">{completedSets}</p>
@@ -272,6 +343,135 @@ export default function Active() {
   const [finishing, setFinishing] = useState(false)
   const [error, setError] = useState(null)
   const elapsed = useElapsed(session?.startedAt)
+
+  // ── Bloqueo de zoom/scroll accidental mientras el entreno está activo ────
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]')
+    const original = meta?.getAttribute('content')
+    meta?.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+    )
+    return () => {
+      if (meta && original) meta.setAttribute('content', original)
+    }
+  }, [])
+
+  // ── Auto-colapso de ejercicios al completar todas sus series ────────────
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set())
+  const prevDoneRef = useRef({})
+  useEffect(() => {
+    exercises.forEach((ex) => {
+      const done = isExerciseDone(ex)
+      const wasDone = prevDoneRef.current[ex.exerciseId]
+      if (done && !wasDone) {
+        setCollapsedIds((prev) => {
+          if (prev.has(ex.exerciseId)) return prev
+          return new Set(prev).add(ex.exerciseId)
+        })
+      }
+      prevDoneRef.current[ex.exerciseId] = done
+    })
+  }, [exercises])
+
+  const onToggleCollapse = useCallback((exId) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(exId)) next.delete(exId)
+      else next.add(exId)
+      return next
+    })
+  }, [])
+
+  // ── Temporizador por ejercicio, secuencial por posición ──────────────────
+  // El timer corre solo para el ejercicio "activo" (el primero, por orden
+  // actual, que aún no terminó sus series). Al completarlo se congela y
+  // arranca el de la siguiente posición. Como está atado a la posición (no
+  // al id del ejercicio), si el drag and drop cambia el orden, el timer de
+  // "primer ejercicio" sigue siendo el de la posición 0, sea cual sea el
+  // ejercicio que quede ahí.
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const segmentTimers = useRef({}) // { [index]: { start, frozen } }
+
+  useEffect(() => {
+    if (exercises.length === 0) return
+    let idx = exercises.findIndex((ex) => !isExerciseDone(ex))
+    if (idx === -1) idx = exercises.length - 1
+
+    if (idx !== activeIndex) {
+      const prevTimer = segmentTimers.current[activeIndex]
+      if (prevTimer && prevTimer.frozen == null && prevTimer.start != null) {
+        prevTimer.frozen = Date.now() - prevTimer.start
+      }
+      setActiveIndex(idx)
+    }
+
+    if (!segmentTimers.current[idx]) {
+      segmentTimers.current[idx] = { start: Date.now(), frozen: null }
+    }
+    if (isExerciseDone(exercises[idx]) && segmentTimers.current[idx].frozen == null) {
+      segmentTimers.current[idx].frozen = Date.now() - segmentTimers.current[idx].start
+    }
+  }, [exercises, activeIndex])
+
+  // ── Drag and drop para reordenar ejercicios ──────────────────────────────
+  const itemRefs = useRef(new Map())
+  const dragInfo = useRef({ currentIndex: 0 })
+  const [dragId, setDragId] = useState(null)
+  const [dragOffsetY, setDragOffsetY] = useState(0)
+
+  const onDragStart = useCallback((e, exerciseId) => {
+    e.preventDefault()
+    const index = useWorkoutStore.getState().exercises.findIndex((ex) => ex.exerciseId === exerciseId)
+    if (index < 0) return
+    dragInfo.current.currentIndex = index
+    setDragOffsetY(0)
+    setDragId(exerciseId)
+  }, [])
+
+  useEffect(() => {
+    if (!dragId) return
+
+    const onMove = (e) => {
+      setDragOffsetY((y) => y + e.movementY)
+
+      const draggedNode = itemRefs.current.get(dragId)
+      if (!draggedNode) return
+      const draggedRect = draggedNode.getBoundingClientRect()
+      const draggedCenter = draggedRect.top + draggedRect.height / 2
+
+      const list = useWorkoutStore.getState().exercises
+      const currentIndex = dragInfo.current.currentIndex
+
+      for (let i = 0; i < list.length; i++) {
+        if (i === currentIndex) continue
+        const node = itemRefs.current.get(list[i].exerciseId)
+        if (!node) continue
+        const rect = node.getBoundingClientRect()
+        const center = rect.top + rect.height / 2
+        const crossed = (i < currentIndex && draggedCenter < center) || (i > currentIndex && draggedCenter > center)
+        if (crossed) {
+          useWorkoutStore.getState().reorderExercises(currentIndex, i)
+          dragInfo.current.currentIndex = i
+          break
+        }
+      }
+    }
+
+    const onUp = () => {
+      setDragId(null)
+      setDragOffsetY(0)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [dragId])
 
   // ── Persistencia diferida (debounce por ejercicio) ──────────────────────
   const persistTimers = useRef({})
@@ -399,7 +599,7 @@ export default function Active() {
   if (!isActive) return null
 
   return (
-    <div className="min-h-screen bg-ink-950 pb-28">
+    <div className="min-h-screen bg-ink-950 pb-28" style={{ touchAction: 'pan-y' }}>
       {modal}
       <header className="bg-ink-900 border-b border-ink-800 px-5 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
@@ -412,7 +612,7 @@ export default function Active() {
       </header>
 
       {restTimer.isRunning && (
-        <RestTimerBar remaining={restTimer.remaining} duration={restTimer.duration} onSkip={restTimer.skip} onAdd30={() => restTimer.addTime(30)} />
+        <RestModal remaining={restTimer.remaining} duration={restTimer.duration} onSkip={restTimer.skip} onAdd30={() => restTimer.addTime(30)} />
       )}
 
       <StatsBar exercises={exercises} elapsed={elapsed} />
@@ -430,20 +630,43 @@ export default function Active() {
           </div>
         )}
 
-        {exercises.map((ex) => (
-          <ExerciseCard
-            key={ex.exerciseId}
-            exercise={ex}
-            lastPerf={lastPerfs[ex.exerciseId]}
-            onAddSet={onAddSet}
-            onWeight={onWeight}
-            onReps={onReps}
-            onType={onType}
-            onComplete={onComplete}
-            onDeleteSet={onDeleteSet}
-            onDeleteExercise={onDeleteExercise}
-          />
-        ))}
+        {exercises.map((ex, index) => {
+          const isDragging = dragId === ex.exerciseId
+          const timer = segmentTimers.current[index]
+          return (
+            <div
+              key={ex.exerciseId}
+              ref={(node) => {
+                if (node) itemRefs.current.set(ex.exerciseId, node)
+                else itemRefs.current.delete(ex.exerciseId)
+              }}
+              style={
+                isDragging
+                  ? { transform: `translateY(${dragOffsetY}px)`, position: 'relative', zIndex: 20 }
+                  : undefined
+              }
+              className={isDragging ? 'opacity-95 shadow-2xl shadow-black/60' : ''}
+            >
+              <ExerciseCard
+                exercise={ex}
+                lastPerf={lastPerfs[ex.exerciseId]}
+                isDone={isExerciseDone(ex)}
+                isCollapsed={collapsedIds.has(ex.exerciseId)}
+                timerStart={timer?.start}
+                timerFrozen={timer?.frozen ?? null}
+                onAddSet={onAddSet}
+                onWeight={onWeight}
+                onReps={onReps}
+                onType={onType}
+                onComplete={onComplete}
+                onDeleteSet={onDeleteSet}
+                onDeleteExercise={onDeleteExercise}
+                onToggleCollapse={onToggleCollapse}
+                onDragStart={onDragStart}
+              />
+            </div>
+          )
+        })}
 
         <div className="card p-4">
           <label className="field-label">Notas del entrenamiento</label>
