@@ -80,10 +80,9 @@ async function uploadFile(localPath, storagePath, retries = 4) {
 }
 
 async function runInBatches(items, fn, concurrency) {
-  let done = 0
   for (let i = 0; i < items.length; i += concurrency) {
     await Promise.all(items.slice(i, i + concurrency).map(fn))
-    done = Math.min(i + concurrency, items.length)
+    const done = Math.min(i + concurrency, items.length)
     log(`\r  ${done}/${items.length}`)
   }
   logline('')

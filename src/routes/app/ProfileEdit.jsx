@@ -116,6 +116,9 @@ export default function ProfileEdit() {
     e.target.value = ''
   }
 
+  // watch() de React Hook Form no es memoizable por el React Compiler (API externa);
+  // el valor se usa solo para previsualizar, sin pasarse a componentes memoizados.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const avatarName = watch('name')
   const bioValue = watch('bio') ?? ''
 

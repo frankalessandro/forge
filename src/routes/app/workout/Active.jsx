@@ -397,20 +397,24 @@ export default function Active() {
   // al id del ejercicio), si el drag and drop cambia el orden, el timer de
   // "primer ejercicio" sigue siendo el de la posición 0, sea cual sea el
   // ejercicio que quede ahí.
-  const [activeIndex, setActiveIndex] = useState(-1)
   const segmentTimers = useRef({}) // { [index]: { start, frozen } }
+  const prevActiveIndexRef = useRef(-1)
+
+  // El ejercicio activo se deriva del orden actual: el primero que aún no terminó
+  // sus series (o el último si ya están todos completos).
+  let activeIndex = exercises.findIndex((ex) => !isExerciseDone(ex))
+  if (activeIndex === -1) activeIndex = exercises.length - 1
 
   useEffect(() => {
     if (exercises.length === 0) return
-    let idx = exercises.findIndex((ex) => !isExerciseDone(ex))
-    if (idx === -1) idx = exercises.length - 1
+    const idx = activeIndex
 
-    if (idx !== activeIndex) {
-      const prevTimer = segmentTimers.current[activeIndex]
+    if (idx !== prevActiveIndexRef.current) {
+      const prevTimer = segmentTimers.current[prevActiveIndexRef.current]
       if (prevTimer && prevTimer.frozen == null && prevTimer.start != null) {
         prevTimer.frozen = Date.now() - prevTimer.start
       }
-      setActiveIndex(idx)
+      prevActiveIndexRef.current = idx
     }
 
     if (!segmentTimers.current[idx]) {
@@ -637,6 +641,9 @@ export default function Active() {
           </div>
         )}
 
+        {/* Lectura intencional del ref de timers: es una caché que no debe
+            re-renderizar; ExerciseCard avanza el cronómetro por su cuenta. */}
+        {/* eslint-disable-next-line react-hooks/refs */}
         {exercises.map((ex, index) => {
           const isDragging = dragId === ex.exerciseId
           const timer = segmentTimers.current[index]

@@ -18,4 +18,11 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Scripts de Node y seeds: corren fuera del browser (acceden a process, etc.)
+    files: ['scripts/**/*.{js,jsx}', 'supabase/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

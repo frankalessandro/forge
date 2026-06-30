@@ -1,3 +1,6 @@
+/* eslint-disable react-refresh/only-export-components --
+   Este archivo es la definición del router: exporta `router` (no un componente)
+   junto a los guards y lazies. Fast refresh no aplica a un archivo de rutas. */
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'

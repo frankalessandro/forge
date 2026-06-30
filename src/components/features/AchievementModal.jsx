@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { createElement, useEffect } from 'react'
 import { X, Lock, Check } from 'lucide-react'
 import { iconFor } from '../../utils/achievementIcons'
 
@@ -11,6 +11,12 @@ const CATEGORY_LABELS = {
   squat:    'Sentadilla',
   deadlift: 'Peso Muerto',
   prs:      'Récords Personales',
+}
+
+// Componente declarado fuera del render: resuelve el ícono dinámico a partir del
+// nombre sin crear un componente nuevo en cada render.
+function AchievementIcon({ name, ...props }) {
+  return createElement(iconFor(name), props)
 }
 
 function formatValue(category, value) {
@@ -28,7 +34,6 @@ function formatValue(category, value) {
 }
 
 export default function AchievementModal({ achievement, unlocked, unlockedAt, value = 0, onClose }) {
-  const Icon = iconFor(achievement.icon)
   const threshold = Number(achievement.threshold)
   const pct = Math.min(100, threshold > 0 ? (value / threshold) * 100 : 0)
   const formattedValue = formatValue(achievement.category, value)
@@ -60,7 +65,7 @@ export default function AchievementModal({ achievement, unlocked, unlockedAt, va
         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
           unlocked ? 'bg-accent/15 text-accent' : 'bg-ink-800 text-zinc-600'
         }`}>
-          {unlocked ? <Icon size={28} /> : <Lock size={28} />}
+          {unlocked ? <AchievementIcon name={achievement.icon} size={28} /> : <Lock size={28} />}
         </div>
 
         {/* Título + XP */}

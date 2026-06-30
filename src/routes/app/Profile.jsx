@@ -63,6 +63,8 @@ export default function Profile() {
     loadRank()
     loadFriendCount()
     return () => { cancelled = true }
+    // Carga única al montar; las funciones de carga son estables en la práctica.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadBodyStats() {
