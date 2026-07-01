@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Check, X, ChevronDown, ChevronUp, Dumbbell, SkipForward, Clock, Info, GripVertical } from 'lucide-react'
+import { Plus, Trash2, Check, X, ChevronDown, ChevronUp, Dumbbell, SkipForward, Clock, Info, GripVertical, Minus } from 'lucide-react'
 import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRestTimer } from '../../../hooks/useRestTimer'
@@ -614,6 +614,13 @@ export default function Active() {
       {modal}
       <header className="bg-ink-900 border-b border-ink-800 px-5 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => navigate('/app/dashboard')}
+            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors -ml-1 p-1"
+            aria-label="Minimizar entreno"
+          >
+            <Minus size={18} />
+          </button>
           <p className="display text-base text-zinc-100">Entreno activo</p>
           <button onClick={handleCancel} className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-400 transition-colors">
             <X size={16} />

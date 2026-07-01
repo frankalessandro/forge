@@ -4,6 +4,7 @@ import { Play, Pencil } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
+import { useWorkoutStore } from '../../stores/workoutStore'
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 
@@ -12,6 +13,7 @@ export default function RoutineDetail() {
   const navigate = useNavigate()
   const { getRoutineDetail } = useRoutines()
   const { startSessionFromRoutine } = useWorkout()
+  const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const [routine, setRoutine] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -38,6 +40,11 @@ export default function RoutineDetail() {
   }, [id, getRoutineDetail])
 
   const handleStart = async () => {
+    // Ya hay un entreno en curso (persistido): lo retomamos en vez de crear otro.
+    if (isWorkoutActive) {
+      navigate('/app/workout/active')
+      return
+    }
     try {
       setStarting(true)
       await startSessionFromRoutine(id)
