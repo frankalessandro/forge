@@ -25,6 +25,11 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import {
+  translateExerciseName,
+  TARGET_TO_MUSCLE_GROUP,
+  BODY_PART_TO_CATEGORY,
+} from './exercise-i18n.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATASET_DIR = join(__dirname, '../../exercises-dataset')
@@ -106,7 +111,7 @@ async function uploadMedia(exercises) {
 
 // ── 2. Upsert exercises ──────────────────────────────────────
 
-function buildRow(ex, existingId = null) {
+function buildRow(ex, existingId = null, groupId = null) {
   const instrEn =
     ex.instructions?.en ||
     (Array.isArray(ex.instruction_steps?.en) ? ex.instruction_steps.en.join(' ') : '') ||
@@ -129,11 +134,17 @@ function buildRow(ex, existingId = null) {
   row.name = ex.name
 
   if (existingId) {
+    // No pisamos name_es / muscle_group_id / category en filas existentes: eso lo
+    // maneja scripts/translate-exercises.js sin sobrescribir nombres curados.
     row.id = existingId
   } else {
-    row.category  = ex.body_part || null
-    row.equipment = ex.equipment || null
-    row.is_custom = false
+    // Fila nueva: la sembramos ya traducida y clasificada en español.
+    const groupName = ex.target && TARGET_TO_MUSCLE_GROUP[ex.target.toLowerCase()]
+    row.name_es         = translateExerciseName(ex.name)
+    row.category        = (ex.body_part && BODY_PART_TO_CATEGORY[ex.body_part.toLowerCase()]) || ex.body_part || null
+    row.muscle_group_id = (groupName && groupId?.get(groupName)) || null
+    row.equipment       = ex.equipment || null
+    row.is_custom       = false
   }
 
   return row
@@ -151,6 +162,11 @@ async function upsertExercises(exercises) {
   const byName = new Map(existing.map(e => [e.name.toLowerCase(), e.id]))
   logline(`  ${existing.length} ejercicios en DB`)
 
+  // Mapa nombre de grupo → id, para clasificar las filas nuevas desde `target`.
+  const { data: groups, error: gErr } = await supabase.from('muscle_groups').select('id, name')
+  if (gErr) throw gErr
+  const groupId = new Map(groups.map(g => [g.name, g.id]))
+
   const toUpdate = []
   const toInsert = []
 
@@ -159,7 +175,7 @@ async function upsertExercises(exercises) {
     if (existingId) {
       toUpdate.push(buildRow(ex, existingId))
     } else {
-      toInsert.push(buildRow(ex))
+      toInsert.push(buildRow(ex, null, groupId))
     }
   }
 
