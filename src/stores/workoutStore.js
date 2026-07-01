@@ -10,6 +10,12 @@ export const useWorkoutStore = create(persist((set) => ({
   session: null,       // { id, startedAt, notes }
   exercises: [],       // [{ exerciseId, name, equipment, sets: [{ id, reps, weight_kg, set_type, completed, dbId }] }]
   isActive: false,
+  // La rehidratación desde localStorage es asíncrona: hasta que esto sea
+  // `true`, `isActive` puede estar en su valor inicial (false) aunque en
+  // realidad haya un entreno guardado. Sin esto, un refresh en /workout/active
+  // dispara el redirect a /workout/start antes de que se restaure el estado.
+  hasHydrated: false,
+  setHasHydrated: (v) => set({ hasHydrated: v }),
 
   startSession: (session) =>
     set({ session, exercises: [], isActive: true }),
@@ -96,4 +102,8 @@ export const useWorkoutStore = create(persist((set) => ({
 }), {
   name: 'forge-workout-session',
   storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ session: state.session, exercises: state.exercises, isActive: state.isActive }),
+  onRehydrateStorage: () => (state) => {
+    state?.setHasHydrated(true)
+  },
 }))

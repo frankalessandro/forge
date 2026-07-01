@@ -335,7 +335,7 @@ function StatsBar({ exercises, elapsed }) {
 // ── Active workout page ────────────────────────────────────────────────────
 export default function Active() {
   const navigate = useNavigate()
-  const { session, exercises, isActive } = useWorkoutStore()
+  const { session, exercises, isActive, hasHydrated } = useWorkoutStore()
   const {
     addSet, syncExerciseSets, completeSet, deleteSet,
     deleteExercise, finishSession, cancelSession, getLastPerformance,
@@ -507,8 +507,10 @@ export default function Active() {
   useEffect(() => () => Object.values(persistTimers.current).forEach(clearTimeout), [])
 
   useEffect(() => {
-    if (!isActive) navigate('/app/workout/start', { replace: true })
-  }, [isActive, navigate])
+    // Esperamos a que termine de rehidratarse el store: recién ahí sabemos
+    // si `isActive` es realmente false o es el valor inicial pre-rehidratación.
+    if (hasHydrated && !isActive) navigate('/app/workout/start', { replace: true })
+  }, [isActive, hasHydrated, navigate])
 
   useEffect(() => {
     const handler = (e) => { e.preventDefault(); e.returnValue = '' }
