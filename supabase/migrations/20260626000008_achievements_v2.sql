@@ -31,9 +31,44 @@ create policy "personal_records_insert_own" on personal_records
 create policy "personal_records_delete_own" on personal_records
   for delete using (auth.uid() = user_id);
 
--- 3. Reemplazar catálogo de logros (cascade limpia user_achievements existentes)
-truncate table achievements cascade;
+-- 3. Actualizar el catálogo de logros de forma no destructiva.
+--
+-- IMPORTANTE: no se usa TRUNCATE ni DELETE sobre `achievements`. Esa tabla es
+-- referenciada por `user_achievements.achievement_id` con
+-- `on delete cascade` (ver 20260626000000_achievements.sql), así que un
+-- TRUNCATE ... CASCADE (o un DELETE de filas de `achievements`) borraría
+-- permanentemente el historial de logros desbloqueados de TODOS los usuarios.
+--
+-- 3a. Remapear ids renombrados en v2 (mismo umbral/semántica, distinto slug)
+-- ANTES de tocar el catálogo, para que los desbloqueos existentes sigan
+-- siendo válidos bajo el nuevo id:
+--   streak_7 (racha de 7 días) -> streak_1w (racha de 7 días)
+--
+-- Los siguientes ids de v1 no tienen equivalente en v2 (ningún logro nuevo
+-- de su misma categoría comparte umbral): streak_3, streak_14, streak_30,
+-- strength_1, strength_150. Sus filas en `achievements` se dejan intactas
+-- (no se insertan/actualizan ni se borran) para no disparar el
+-- ON DELETE CASCADE y así preservar cualquier desbloqueo ya existente.
+update user_achievements set achievement_id = 'streak_1w'
+where achievement_id = 'streak_7'
+  and not exists (
+    select 1 from user_achievements existing
+    where existing.user_id = user_achievements.user_id
+      and existing.achievement_id = 'streak_1w'
+  );
 
+-- Limpia duplicados residuales que no pudieron remapearse por violar el
+-- unique (user_id, achievement_id) (el usuario ya tenía ambos desbloqueados).
+delete from user_achievements
+where achievement_id = 'streak_7'
+  and exists (
+    select 1 from user_achievements existing
+    where existing.user_id = user_achievements.user_id
+      and existing.achievement_id = 'streak_1w'
+  );
+
+-- 3b. Upsert del catálogo v2: inserta logros nuevos y actualiza los
+-- existentes por id sin borrar ninguna fila (ver nota 3a arriba).
 insert into achievements (id, name, description, category, icon, threshold, xp, sort_order) values
 
   -- ── CONSTANCIA (rachas en semanas → umbral en días) ──────
@@ -101,4 +136,13 @@ insert into achievements (id, name, description, category, icon, threshold, xp, 
   ('prs_5',  '5 récords rotos',    '5 récords personales superados.',      'prs', 'trophy',   5,   100, 91),
   ('prs_10', '10 récords',         '10 récords personales superados.',     'prs', 'medal',   10,   200, 92),
   ('prs_25', 'Rompe límites',      '25 récords personales superados.',     'prs', 'medal',   25,   400, 93),
-  ('prs_50', 'Máquina de récords', '50 récords personales superados.',     'prs', 'star',    50,   800, 94);
+  ('prs_50', 'Máquina de récords', '50 récords personales superados.',     'prs', 'star',    50,   800, 94)
+
+on conflict (id) do update set
+  name        = excluded.name,
+  description = excluded.description,
+  category    = excluded.category,
+  icon        = excluded.icon,
+  threshold   = excluded.threshold,
+  xp          = excluded.xp,
+  sort_order  = excluded.sort_order;
