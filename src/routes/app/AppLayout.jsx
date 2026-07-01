@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Home, ClipboardList, TrendingUp, User, Plus, Play, Dumbbell, Scale, X } from 'lucide-react'
 import { useWorkout } from '../../hooks/useWorkout'
+import { useWorkoutStore } from '../../stores/workoutStore'
 import Sheet from '../../components/ui/Sheet'
 import { Toaster } from 'sileo'
 
@@ -37,6 +38,7 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { startSession } = useWorkout()
+  const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [starting, setStarting] = useState(false)
 
@@ -44,6 +46,12 @@ export default function AppLayout() {
   const hideNav = location.pathname.startsWith('/app/workout/active')
 
   const handleStartFree = async () => {
+    // Ya hay un entreno en curso (persistido): lo retomamos en vez de crear otro.
+    if (isWorkoutActive) {
+      setSheetOpen(false)
+      navigate('/app/workout/active')
+      return
+    }
     try {
       setStarting(true)
       await startSession()

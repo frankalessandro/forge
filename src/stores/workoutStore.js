@@ -1,6 +1,12 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
-export const useWorkoutStore = create((set) => ({
+// Persistido en localStorage: si hay un refresh, un reset inesperado o se
+// pierde la conexión a mitad de un entreno, el estado en curso (sesión,
+// ejercicios, series) sigue disponible al volver. Los sets ya confirmados
+// también viven en Supabase (useWorkout los sincroniza), pero lo no
+// guardado aún (inputs sin debounce, orden, colapsos) solo vive acá.
+export const useWorkoutStore = create(persist((set) => ({
   session: null,       // { id, startedAt, notes }
   exercises: [],       // [{ exerciseId, name, equipment, sets: [{ id, reps, weight_kg, set_type, completed, dbId }] }]
   isActive: false,
@@ -87,4 +93,7 @@ export const useWorkoutStore = create((set) => ({
 
   cancelSession: () =>
     set({ session: null, exercises: [], isActive: false }),
+}), {
+  name: 'forge-workout-session',
+  storage: createJSONStorage(() => localStorage),
 }))

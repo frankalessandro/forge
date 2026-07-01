@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Dumbbell, ChevronRight } from 'lucide-react'
 import { useWorkout } from '../../../hooks/useWorkout'
+import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useRoutines } from '../../../hooks/useRoutines'
 import PageHeader from '../../../components/ui/PageHeader'
 import CategoryBadge from '../../../components/ui/CategoryBadge'
@@ -9,11 +10,17 @@ import CategoryBadge from '../../../components/ui/CategoryBadge'
 export default function Start() {
   const navigate = useNavigate()
   const { startSession } = useWorkout()
+  const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const { getPublicRoutines, getUserRoutines } = useRoutines()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [routines, setRoutines] = useState([])
   const [routinesLoading, setRoutinesLoading] = useState(true)
+
+  // Ya hay un entreno en curso: no tiene sentido empezar otro, lo retomamos.
+  useEffect(() => {
+    if (isWorkoutActive) navigate('/app/workout/active', { replace: true })
+  }, [isWorkoutActive, navigate])
 
   useEffect(() => {
     let cancelled = false

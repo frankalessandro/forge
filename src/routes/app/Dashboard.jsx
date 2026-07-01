@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
 import { useDashboardStats } from '../../hooks/useDashboardStats'
+import { useWorkoutStore } from '../../stores/workoutStore'
 import Stat from '../../components/ui/Stat'
 
 function greeting() {
@@ -11,9 +13,47 @@ function greeting() {
   return 'Buenas noches'
 }
 
+function formatClock(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function ActiveWorkoutBanner({ startedAt, exerciseCount }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [startedAt])
+
+  return (
+    <Link
+      to="/app/workout/active"
+      className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
+    >
+      <div className="absolute -right-6 -bottom-8 opacity-20">
+        <Dumbbell size={140} strokeWidth={1.5} />
+      </div>
+      <p className="font-display uppercase tracking-[0.2em] text-xs font-semibold opacity-70">
+        Entreno en curso · {exerciseCount} {exerciseCount === 1 ? 'ejercicio' : 'ejercicios'}
+      </p>
+      <p className="font-display font-bold uppercase text-4xl leading-[0.95] mt-2 tabular-nums">
+        {formatClock(elapsed)}
+      </p>
+      <span className="inline-flex items-center gap-2 mt-5 font-display font-semibold uppercase tracking-wide text-sm bg-ink-950 text-accent rounded-xl px-4 py-2.5 group-hover:gap-3 transition-all">
+        <Play size={16} fill="currentColor" />
+        Continuar
+      </span>
+    </Link>
+  )
+}
+
 export default function Dashboard() {
   const { data: stats, loading, error } = useDashboardStats()
   const name = stats?.name || ''
+  const { session, exercises, isActive } = useWorkoutStore()
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -36,25 +76,29 @@ export default function Dashboard() {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         )}
 
-        {/* HERO: empezar */}
-        <Link
-          to="/app/workout/start"
-          className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
-        >
-          <div className="absolute -right-6 -bottom-8 opacity-20">
-            <Dumbbell size={140} strokeWidth={1.5} />
-          </div>
-          <p className="font-display uppercase tracking-[0.2em] text-xs font-semibold opacity-70">
-            Listo para entrenar
-          </p>
-          <p className="font-display font-bold uppercase text-4xl leading-[0.95] mt-2">
-            Empezar<br />entrenamiento
-          </p>
-          <span className="inline-flex items-center gap-2 mt-5 font-display font-semibold uppercase tracking-wide text-sm bg-ink-950 text-accent rounded-xl px-4 py-2.5 group-hover:gap-3 transition-all">
-            <Play size={16} fill="currentColor" />
-            Vamos
-          </span>
-        </Link>
+        {/* HERO: empezar / entreno en curso */}
+        {isActive && session ? (
+          <ActiveWorkoutBanner startedAt={session.startedAt} exerciseCount={exercises.length} />
+        ) : (
+          <Link
+            to="/app/workout/start"
+            className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
+          >
+            <div className="absolute -right-6 -bottom-8 opacity-20">
+              <Dumbbell size={140} strokeWidth={1.5} />
+            </div>
+            <p className="font-display uppercase tracking-[0.2em] text-xs font-semibold opacity-70">
+              Listo para entrenar
+            </p>
+            <p className="font-display font-bold uppercase text-4xl leading-[0.95] mt-2">
+              Empezar<br />entrenamiento
+            </p>
+            <span className="inline-flex items-center gap-2 mt-5 font-display font-semibold uppercase tracking-wide text-sm bg-ink-950 text-accent rounded-xl px-4 py-2.5 group-hover:gap-3 transition-all">
+              <Play size={16} fill="currentColor" />
+              Vamos
+            </span>
+          </Link>
+        )}
 
         {/* Stats semana */}
         <section>
