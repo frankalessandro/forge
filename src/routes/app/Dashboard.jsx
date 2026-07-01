@@ -1,24 +1,7 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
-import { buildWeeks, computeStreak, getMonday } from '../../utils/streak'
-import { displayWeight } from '../../utils/weight'
-
-function getMondayOfWeek(date) {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function calcVolume(sets) {
-  return sets
-    .filter((s) => s.set_type !== 'warmup')
-    .reduce((acc, s) => acc + (s.reps ?? 0) * displayWeight(s.weight_kg, s.exercises?.equipment), 0)
-}
+import { useDashboardStats } from '../../hooks/useDashboardStats'
+import Stat from '../../components/ui/Stat'
 
 function greeting() {
   const h = new Date().getHours()
@@ -29,64 +12,8 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null)
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const now = new Date()
-      const monday = getMondayOfWeek(now)
-
-      // Racha semanal: cuenta semanas consecutivas que cumplen el objetivo
-      // de días/semana del usuario (no días consecutivos de calendario).
-      const since = getMonday(now)
-      since.setDate(since.getDate() - 11 * 7)
-
-      // Las tres lecturas son independientes: van en paralelo (3 round-trips → 1).
-      const [
-        { data: profile },
-        { data: weekSessions },
-        { data: recentSessions },
-      ] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('name, training_days_per_week')
-          .maybeSingle(),
-        supabase
-          .from('workout_sessions')
-          .select('id, started_at')
-          .not('finished_at', 'is', null)
-          .gte('started_at', monday.toISOString()),
-        supabase
-          .from('workout_sessions')
-          .select('started_at')
-          .not('finished_at', 'is', null)
-          .gte('started_at', since.toISOString()),
-      ])
-
-      if (profile?.name) setName(profile.name)
-      const goal = profile?.training_days_per_week || 1
-
-      let weekVolume = 0
-      if (weekSessions && weekSessions.length > 0) {
-        const ids = weekSessions.map((s) => s.id)
-        const { data: weekSets } = await supabase
-          .from('workout_sets')
-          .select('reps, weight_kg, set_type, exercises(equipment)')
-          .in('session_id', ids)
-        weekVolume = calcVolume(weekSets ?? [])
-      }
-
-      const weeks = buildWeeks((recentSessions ?? []).map((s) => s.started_at), goal, 12)
-      const streak = computeStreak(weeks)
-
-      setStats({ workouts: weekSessions?.length ?? 0, volume: weekVolume, streak })
-      setLoading(false)
-    }
-    load()
-  }, [])
+  const { data: stats, loading, error } = useDashboardStats()
+  const name = stats?.name || ''
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -100,11 +27,15 @@ export default function Dashboard() {
         </div>
         <Link to="/app/streak" className="flex items-center gap-1.5 chip-accent hover:opacity-90 transition-opacity">
           <Flame size={13} />
-          {loading ? '·' : stats.streak} sem
+          {loading || !stats ? '·' : stats.streak} sem
         </Link>
       </header>
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-8">
+        {error && (
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+        )}
+
         {/* HERO: empezar */}
         <Link
           to="/app/workout/start"
@@ -134,17 +65,17 @@ export default function Dashboard() {
                 <div key={i} className="h-24 rounded-2xl bg-ink-900 border border-ink-800 animate-pulse" />
               ))}
             </div>
-          ) : (
+          ) : stats ? (
             <div className="grid grid-cols-3 gap-3">
-              <Stat value={stats.workouts} label="Entrenos" />
+              <Stat value={stats.workouts.toLocaleString('es')} label="Entrenos" />
               <Stat
-                value={stats.volume > 0 ? Math.round(stats.volume / 1000 * 10) / 10 : 0}
+                value={(stats.volume > 0 ? Math.round(stats.volume / 1000 * 10) / 10 : 0).toLocaleString('es')}
                 suffix="t"
                 label="Volumen"
               />
-              <Stat value={stats.streak} suffix="sem" label="Racha" accent to="/app/streak" />
+              <Stat value={stats.streak.toLocaleString('es')} suffix="sem" label="Racha" variant="accent" to="/app/streak" />
             </div>
-          )}
+          ) : null}
         </section>
 
         {/* Accesos */}
@@ -160,22 +91,6 @@ export default function Dashboard() {
       </main>
     </div>
   )
-}
-
-function Stat({ value, label, suffix, accent, to }) {
-  const className = `block rounded-2xl border p-4 ${
-    accent ? 'bg-accent/10 border-accent/25' : 'bg-ink-900 border-ink-800'
-  } ${to ? 'card-hover' : ''}`
-  const inner = (
-    <>
-      <p className={`stat-num text-3xl ${accent ? 'text-accent' : 'text-zinc-100'}`}>
-        {typeof value === 'number' ? value.toLocaleString('es') : value}
-        {suffix && <span className="text-base font-semibold text-zinc-500 ml-0.5">{suffix}</span>}
-      </p>
-      <p className="eyebrow mt-1.5">{label}</p>
-    </>
-  )
-  return to ? <Link to={to} className={className}>{inner}</Link> : <div className={className}>{inner}</div>
 }
 
 function AccessRow({ to, icon: Icon, title, subtitle }) {

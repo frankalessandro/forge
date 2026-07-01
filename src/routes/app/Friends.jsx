@@ -39,22 +39,11 @@ export default function Friends() {
   }, [listFriends, listRequests])
 
   useEffect(() => {
-    let cancelled = false
     async function load() {
-      try {
-        const [f, r] = await Promise.all([listFriends(), listRequests()])
-        if (cancelled) return
-        setFriends(f)
-        setRequests(r)
-      } catch (err) {
-        if (!cancelled) setError(err.message)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+      await refresh()
     }
     load()
-    return () => { cancelled = true }
-  }, [listFriends, listRequests])
+  }, [refresh])
 
   // Búsqueda con debounce. Todo el setState ocurre dentro del timeout para no
   // disparar renders en cascada desde el cuerpo del efecto.

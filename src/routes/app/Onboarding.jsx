@@ -1,25 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Flame, Dumbbell, Zap, Activity, Heart, Check } from 'lucide-react'
+import { z } from 'zod'
+import { ArrowLeft, ArrowRight, Flame, Check } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useAuthStore } from '../../stores/authStore'
 import { useProfile } from '../../hooks/useProfile'
 import { useRoutines } from '../../hooks/useRoutines'
-import { levelFromActivity } from '../../utils/routineTemplates'
+import { levelFromActivity, GOALS, TRAINING_DAYS, MAX_GOALS } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { AuthShell } from '../auth/Login'
 
-const GOALS = [
-  { value: 'gain_muscle', label: 'Ganar músculo', icon: Dumbbell },
-  { value: 'lose_fat', label: 'Perder grasa', icon: Flame },
-  { value: 'strength', label: 'Fuerza', icon: Zap },
-  { value: 'endurance', label: 'Resistencia', icon: Activity },
-  { value: 'health', label: 'Salud general', icon: Heart },
-]
-
 const STEPS = 6
-const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
-const MAX_GOALS = 3
+
+const measurementsSchema = z.object({
+  height_cm: z.string().refine(
+    (v) => v === '' || (Number(v) > 0 && Number(v) <= 300),
+    'Ingresa una altura válida (1-300 cm)'
+  ),
+  weight_kg: z.string().refine(
+    (v) => v === '' || (Number(v) > 0 && Number(v) <= 500),
+    'Ingresa un peso válido (1-500 kg)'
+  ),
+})
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -43,6 +45,7 @@ export default function Onboarding() {
     goals: [],
   })
   const [saving, setSaving] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
 
   // Si ya completó el onboarding en otra pestaña o volvió atrás, mandar al dashboard
   useEffect(() => {
@@ -85,8 +88,8 @@ export default function Onboarding() {
           level: levelFromActivity(data.activity_level),
           daysPerWeek: data.training_days_per_week !== '' ? Number(data.training_days_per_week) : 3,
         })
-      } catch {
-        // silencioso
+      } catch (err) {
+        sileo.error({ title: 'No se pudieron generar tus rutinas', description: err.message })
       }
     }
 
@@ -95,7 +98,19 @@ export default function Onboarding() {
     navigate('/app/dashboard', { replace: true })
   }
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS))
+  const next = () => {
+    if (step === 3) {
+      const result = measurementsSchema.safeParse({ height_cm: data.height_cm, weight_kg: data.weight_kg })
+      if (!result.success) {
+        const errors = {}
+        for (const issue of result.error.issues) errors[issue.path[0]] = issue.message
+        setFieldErrors(errors)
+        return
+      }
+    }
+    setFieldErrors({})
+    setStep((s) => Math.min(s + 1, STEPS))
+  }
   const back = () => setStep((s) => Math.max(s - 1, 1))
 
   return (
@@ -173,6 +188,7 @@ export default function Onboarding() {
                   className="input text-center text-lg py-3"
                   placeholder="175"
                 />
+                {fieldErrors.height_cm && <p className="text-xs text-red-400 mt-1">{fieldErrors.height_cm}</p>}
               </label>
               <label className="block">
                 <span className="field-label">Peso (kg)</span>
@@ -184,6 +200,7 @@ export default function Onboarding() {
                   className="input text-center text-lg py-3"
                   placeholder="70"
                 />
+                {fieldErrors.weight_kg && <p className="text-xs text-red-400 mt-1">{fieldErrors.weight_kg}</p>}
               </label>
             </div>
           </Step>

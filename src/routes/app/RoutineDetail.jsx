@@ -5,18 +5,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
 import PageHeader from '../../components/ui/PageHeader'
-
-const CATEGORY_COLORS = {
-  PPL: 'bg-sky-400/15 text-sky-300',
-  'Full Body': 'bg-accent/15 text-accent',
-  'Upper Lower': 'bg-fuchsia-400/15 text-fuchsia-300',
-}
-
-function CategoryBadge({ category }) {
-  if (!category) return null
-  const cls = CATEGORY_COLORS[category] ?? 'bg-ink-800 text-zinc-400'
-  return <span className={`chip ${cls}`}>{category}</span>
-}
+import CategoryBadge from '../../components/ui/CategoryBadge'
 
 export default function RoutineDetail() {
   const { id } = useParams()
@@ -30,19 +19,22 @@ export default function RoutineDetail() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
       try {
         const data = await getRoutineDetail(id)
+        if (cancelled) return
         const userId = useAuthStore.getState().user?.id
         setRoutine(data)
         setIsOwner(Boolean(userId && data.user_id === userId))
       } catch (err) {
-        setError(err.message)
+        if (!cancelled) setError(err.message)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [id, getRoutineDetail])
 
   const handleStart = async () => {

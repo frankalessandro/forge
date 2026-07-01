@@ -1,59 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Flame, Target, ChevronLeft, ChevronRight } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/ui/PageHeader'
-import { buildWeeks, computeStreak, getMonday, toDateStr } from '../../utils/streak'
+import { toDateStr } from '../../utils/streak'
+import { GOAL_LABELS } from '../../utils/routineTemplates'
+import { useStreakData } from '../../hooks/useStreakData'
 
 const DAY_LABELS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do']
 
-const GOAL_LABELS = {
-  lose_fat: 'Perder grasa',
-  gain_muscle: 'Ganar músculo',
-  strength: 'Fuerza',
-  endurance: 'Resistencia',
-  health: 'Salud general',
-}
-
 export default function Streak() {
-  const [loading, setLoading] = useState(true)
-  const [weeks, setWeeks] = useState([])
-  const [streak, setStreak] = useState(0)
-  const [target, setTarget] = useState(1)
-  const [goal, setGoal] = useState(null)
-  const [trainedSet, setTrainedSet] = useState(() => new Set())
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('training_days_per_week, goal')
-        .maybeSingle()
-
-      const targetDays = profile?.training_days_per_week || 1
-      setTarget(targetDays)
-      setGoal(profile?.goal ?? null)
-
-      // Traemos sesiones finalizadas de las últimas 12 semanas.
-      const since = getMonday(new Date())
-      since.setDate(since.getDate() - 11 * 7)
-
-      const { data: sessions } = await supabase
-        .from('workout_sessions')
-        .select('started_at')
-        .not('finished_at', 'is', null)
-        .gte('started_at', since.toISOString())
-
-      const dates = (sessions ?? []).map((s) => s.started_at)
-      const builtWeeks = buildWeeks(dates, targetDays, 12)
-      setWeeks(builtWeeks)
-      setStreak(computeStreak(builtWeeks))
-      setTrainedSet(new Set(dates.map(toDateStr)))
-      setLoading(false)
-    }
-    load()
-  }, [])
+  const { data, loading, error } = useStreakData()
+  const weeks = data?.weeks ?? []
+  const streak = data?.streak ?? 0
+  const target = data?.target ?? 1
+  const goal = data?.goal ?? null
+  const trainedSet = data?.trainedSet ?? new Set()
 
   const current = weeks[0]
   const remaining = current ? Math.max(0, target - current.count) : target
@@ -63,6 +23,10 @@ export default function Streak() {
       <PageHeader title="Tu racha" back="/app/dashboard" />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-6">
+        {error && (
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+        )}
+
         {loading ? (
           <div className="animate-pulse space-y-4">
             <div className="h-40 card" />

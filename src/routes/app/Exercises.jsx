@@ -4,19 +4,7 @@ import { Search, Dumbbell } from 'lucide-react'
 import { useExercises } from '../../hooks/useExercises'
 import { useExerciseStore } from '../../stores/exerciseStore'
 import PageHeader from '../../components/ui/PageHeader'
-
-const BODY_PARTS = [
-  { value: 'back',       label: 'Espalda' },
-  { value: 'chest',      label: 'Pecho' },
-  { value: 'shoulders',  label: 'Hombros' },
-  { value: 'upper arms', label: 'Brazos' },
-  { value: 'lower arms', label: 'Antebrazos' },
-  { value: 'upper legs', label: 'Piernas' },
-  { value: 'lower legs', label: 'Pantorrillas' },
-  { value: 'waist',      label: 'Core' },
-  { value: 'neck',       label: 'Cuello' },
-  { value: 'cardio',     label: 'Cardio' },
-]
+import { BODY_PARTS } from '../../utils/exerciseFilters'
 
 const EQUIPMENT_OPTIONS = [
   'barbell', 'dumbbell', 'kettlebell', 'machine', 'cable',

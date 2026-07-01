@@ -1,23 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Lock } from 'lucide-react'
 import { useAchievements, valueForCategory } from '../../hooks/useAchievements'
-import { iconFor } from '../../utils/achievementIcons'
+import { iconFor, CATEGORY_LABELS } from '../../utils/achievementIcons'
 import PageHeader from '../../components/ui/PageHeader'
 import RankCard from '../../components/features/RankCard'
 import AchievementModal from '../../components/features/AchievementModal'
 
 const CATEGORY_ORDER = ['streak', 'workouts', 'volume', 'strength', 'bench', 'squat', 'deadlift', 'prs']
-
-const CATEGORY_LABELS = {
-  streak:   'Constancia',
-  workouts: 'Entrenos',
-  volume:   'Volumen',
-  strength: 'Fuerza',
-  bench:    'Press de Banca',
-  squat:    'Sentadilla',
-  deadlift: 'Peso Muerto',
-  prs:      'Récords Personales',
-}
 
 function AchievementBadge({ achievement, unlocked, value, onClick }) {
   const Icon = unlocked ? achievement.Icon : Lock

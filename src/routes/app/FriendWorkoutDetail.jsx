@@ -4,30 +4,9 @@ import { Trophy, ChevronRight } from 'lucide-react'
 import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
 import Stat from '../../components/ui/Stat'
-
-function formatDuration(startedAt, finishedAt) {
-  const ms = new Date(finishedAt) - new Date(startedAt)
-  const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function calcVolume(sets) {
-  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * (s.weight_kg ?? 0), 0)
-}
-
-function bestSet(sets) {
-  const working = sets.filter((s) => s.set_type !== 'warmup' && (s.weight_kg ?? 0) > 0)
-  if (!working.length) return null
-  return working.reduce((best, s) => ((s.weight_kg ?? 0) > (best.weight_kg ?? 0) ? s : best))
-}
-
-const SET_TYPE_LABEL = { normal: null, warmup: 'Calent.', dropset: 'Dropset', failure: 'Fallo' }
-const SET_TYPE_COLOR = { warmup: 'text-amber-300', dropset: 'text-fuchsia-300', failure: 'text-red-300' }
+import { calcVolume } from '../../utils/weight'
+import { formatDuration } from '../../utils/duration'
+import { bestSet, SET_TYPE_LABEL, SET_TYPE_COLOR } from '../../utils/workoutSets'
 
 export default function FriendWorkoutDetail() {
   const { userId, sessionId } = useParams()

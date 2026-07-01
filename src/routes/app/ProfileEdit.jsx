@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Camera, Dumbbell, Flame, Zap, Activity, Heart, Check } from 'lucide-react'
+import { Camera, Check } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useProfile } from '../../hooks/useProfile'
 import PageHeader from '../../components/ui/PageHeader'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
+import { GOALS, TRAINING_DAYS, MAX_GOALS } from '../../utils/routineTemplates'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').optional().or(z.literal('')),
@@ -22,16 +23,6 @@ const profileSchema = z.object({
   ),
 })
 
-const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
-const MAX_GOALS = 3
-
-const GOALS = [
-  { value: 'gain_muscle', label: 'Ganar músculo', icon: Dumbbell },
-  { value: 'lose_fat', label: 'Perder grasa', icon: Flame },
-  { value: 'strength', label: 'Fuerza', icon: Zap },
-  { value: 'endurance', label: 'Resistencia', icon: Activity },
-  { value: 'health', label: 'Salud general', icon: Heart },
-]
 
 export default function ProfileEdit() {
   const navigate = useNavigate()

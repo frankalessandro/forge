@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { Link } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
 import { sileo } from 'sileo'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
+import { useOAuthLogin } from '../../hooks/useOAuthLogin'
 import { AuthShell, OAuthButton, Divider } from './Login'
 
 // Requisitos de contraseña fuerte. Zod evalúa en orden y muestra el primer
@@ -32,7 +33,8 @@ export default function Register() {
   // sola a /app/onboarding apenas se publica la sesión. La encuesta vive ahí
   // (Onboarding.jsx), igual que para el flujo de Google.
   const [confirmEmail, setConfirmEmail] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState(null)
+  const signUp = useAuthStore((s) => s.signUp)
+  const { oauthLoading, handleOAuth } = useOAuthLogin()
 
   const {
     register,
@@ -42,7 +44,7 @@ export default function Register() {
   } = useForm({ resolver: zodResolver(credentialsSchema) })
 
   const onCreateAccount = async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await signUp(email, password)
     if (error) {
       sileo.error({ title: 'Error al crear cuenta', description: 'Probá con otro email.' })
       setError('root', { message: 'No se pudo crear la cuenta. Prueba con otro email.' })
@@ -52,18 +54,6 @@ export default function Register() {
       sileo.success({ title: 'Cuenta creada', description: 'Completá tu perfil para empezar.' })
     } else {
       setConfirmEmail(true)
-    }
-  }
-
-  const handleOAuth = async (provider) => {
-    setOauthLoading(provider)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) {
-      sileo.error({ title: 'Error al conectar', description: error.message })
-      setOauthLoading(null)
     }
   }
 

@@ -40,9 +40,9 @@ function page(node) {
 // localStorage) entramos ya; si todavía no confirmamos nada mostramos el splash;
 // solo redirigimos a login cuando supabase confirmó que no hay sesión.
 function RequireAuth() {
-  const session = useAuthStore((s) => s.session)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const ready = useAuthStore((s) => s.ready)
-  if (session) return <Outlet />
+  if (isAuthenticated) return <Outlet />
   if (!ready) return <Splash />
   return <Navigate to="/login" replace />
 }
@@ -51,18 +51,18 @@ function RequireAuth() {
 // (o a la encuesta de onboarding si todavía no completó el perfil).
 // El seed síncrono cubre el caso del usuario logueado: nunca flashea el login.
 function GuestOnly() {
-  const session = useAuthStore((s) => s.session)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
-  if (session) return <Navigate to={needsOnboarding ? '/app/onboarding' : '/app/dashboard'} replace />
+  if (isAuthenticated) return <Navigate to={needsOnboarding ? '/app/onboarding' : '/app/dashboard'} replace />
   return <Outlet />
 }
 
 function RootRedirect() {
-  const session = useAuthStore((s) => s.session)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const ready = useAuthStore((s) => s.ready)
   const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
   if (!ready) return <Splash />
-  if (!session) return <Navigate to="/login" replace />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
   if (needsOnboarding) return <Navigate to="/app/onboarding" replace />
   return <Navigate to="/app/dashboard" replace />
 }
