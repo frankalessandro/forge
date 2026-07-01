@@ -6,6 +6,8 @@
 // por grupo muscular. La capa de base de datos vive en hooks/useRoutines.js.
 // ============================================================
 
+import { Flame, Dumbbell, Zap, Activity, Heart } from 'lucide-react'
+
 export const GOAL_LABELS = {
   lose_fat: 'Perder grasa',
   gain_muscle: 'Ganar músculo',
@@ -13,6 +15,21 @@ export const GOAL_LABELS = {
   endurance: 'Resistencia',
   health: 'Salud general',
 }
+
+// Objetivos seleccionables (onboarding + edición de perfil).
+export const GOALS = [
+  { value: 'gain_muscle', label: 'Ganar músculo', icon: Dumbbell },
+  { value: 'lose_fat', label: 'Perder grasa', icon: Flame },
+  { value: 'strength', label: 'Fuerza', icon: Zap },
+  { value: 'endurance', label: 'Resistencia', icon: Activity },
+  { value: 'health', label: 'Salud general', icon: Heart },
+]
+
+// Días de entrenamiento por semana seleccionables.
+export const TRAINING_DAYS = [2, 3, 4, 5, 6, 7]
+
+// Máximo de objetivos que un usuario puede seleccionar a la vez.
+export const MAX_GOALS = 3
 
 // Esquema series/reps/descanso según el objetivo. `compound` aplica a los
 // movimientos básicos (multiarticulares); `accessory` al trabajo de aislamiento.

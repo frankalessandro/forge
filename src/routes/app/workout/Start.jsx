@@ -4,18 +4,7 @@ import { Play, Dumbbell, ChevronRight } from 'lucide-react'
 import { useWorkout } from '../../../hooks/useWorkout'
 import { useRoutines } from '../../../hooks/useRoutines'
 import PageHeader from '../../../components/ui/PageHeader'
-
-const CATEGORY_COLORS = {
-  PPL: 'bg-sky-400/15 text-sky-300',
-  'Full Body': 'bg-accent/15 text-accent',
-  'Upper Lower': 'bg-fuchsia-400/15 text-fuchsia-300',
-}
-
-function CategoryBadge({ category }) {
-  if (!category) return null
-  const cls = CATEGORY_COLORS[category] ?? 'bg-ink-800 text-zinc-400'
-  return <span className={`chip ${cls}`}>{category}</span>
-}
+import CategoryBadge from '../../../components/ui/CategoryBadge'
 
 export default function Start() {
   const navigate = useNavigate()
@@ -27,17 +16,20 @@ export default function Start() {
   const [routinesLoading, setRoutinesLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
       try {
         const [user, pub] = await Promise.all([getUserRoutines(), getPublicRoutines()])
+        if (cancelled) return
         setRoutines([...user, ...pub])
       } catch (err) {
-        setError(err.message)
+        if (!cancelled) setError(err.message)
       } finally {
-        setRoutinesLoading(false)
+        if (!cancelled) setRoutinesLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [getUserRoutines, getPublicRoutines])
 
   const handleStartFree = async () => {

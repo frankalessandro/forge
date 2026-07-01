@@ -78,3 +78,9 @@ insert into exercises (name, description, category, muscle_group_id, equipment, 
 ('Mountain Climber', 'Escaladores en plancha: core y cardio.', 'Core', (select id from muscle_groups where name='Abs'), 'Bodyweight', ARRAY['Abs']::text[], ARRAY['Shoulders']::text[], false)
 
 on conflict (name) do nothing;
+
+-- Slug estable para los ejercicios usados por logros de categoría específica
+-- (bench/squat/deadlift en useAchievements.js). Idempotente.
+update exercises set slug = 'bench_press'   where name = 'Bench Press'   and slug is null;
+update exercises set slug = 'barbell_squat' where name = 'Barbell Squat' and slug is null;
+update exercises set slug = 'deadlift'      where name = 'Deadlift'      and slug is null;

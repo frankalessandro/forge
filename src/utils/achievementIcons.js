@@ -15,3 +15,14 @@ const ICON_MAP = {
 export function iconFor(name) {
   return ICON_MAP[name] ?? Star
 }
+
+export const CATEGORY_LABELS = {
+  streak:   'Constancia',
+  workouts: 'Entrenos',
+  volume:   'Volumen',
+  strength: 'Fuerza',
+  bench:    'Press de Banca',
+  squat:    'Sentadilla',
+  deadlift: 'Peso Muerto',
+  prs:      'Récords Personales',
+}

@@ -1,24 +1,28 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 
-function readPersistedSession() {
+// Solo comprobamos si hay un token persistido para el render optimista inicial
+// (evita el flash de login si el usuario ya estaba logueado). El token en sí
+// nunca se expone fuera de este chequeo: supabase-js ya lo administra en su
+// propio storage, y no hace falta duplicarlo en el estado global de Zustand.
+function hasPersistedSession() {
   try {
     const ref = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0]
     const raw = localStorage.getItem(`sb-${ref}-auth-token`)
-    if (!raw) return null
+    if (!raw) return false
     const parsed = JSON.parse(raw)
     const session = parsed?.access_token ? parsed : parsed?.currentSession
-    return session?.access_token ? session : null
+    return Boolean(session?.access_token)
   } catch {
-    return null
+    return false
   }
 }
 
-const seed = readPersistedSession()
-
 export const useAuthStore = create((set) => ({
-  session: seed,
-  user: seed?.user ?? null,
+  // isAuthenticated arranca en `true` si había un token persistido, para el
+  // render optimista; `user` se confirma recién cuando resuelve getSession().
+  isAuthenticated: hasPersistedSession(),
+  user: null,
   // ready = supabase confirmó la sesión real + chequeamos si necesita onboarding
   ready: false,
   needsOnboarding: false,
@@ -38,12 +42,12 @@ export const useAuthStore = create((set) => ({
       .getSession()
       .then(async ({ data: { session } }) => {
         const needsOnboarding = await resolveNeedsOnboarding(session)
-        set({ session, user: session?.user ?? null, ready: true, needsOnboarding })
+        set({ isAuthenticated: Boolean(session), user: session?.user ?? null, ready: true, needsOnboarding })
       })
       .catch(() => {
         // Token corrupto/inválido en localStorage: tratamos como deslogueado
         // en vez de dejar `ready` colgado en false para siempre (spinner infinito).
-        set({ session: null, user: null, ready: true, needsOnboarding: false })
+        set({ isAuthenticated: false, user: null, ready: true, needsOnboarding: false })
       })
 
     // Sincroniza la sesión y recalcula needsOnboarding cada vez que aparece una
@@ -52,24 +56,43 @@ export const useAuthStore = create((set) => ({
     const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         lastUserId = null
-        set({ session, user: null, needsOnboarding: false })
+        set({ isAuthenticated: false, user: null, needsOnboarding: false })
         return
       }
       if (session.user.id === lastUserId) {
-        set({ session, user: session.user })
+        set({ isAuthenticated: true, user: session.user })
         return
       }
       lastUserId = session.user.id
       // Resolvemos needsOnboarding antes de publicar la sesión nueva para que
       // RootRedirect no alcance a mandar al dashboard antes de saber si hace falta onboarding.
       const needsOnboarding = await resolveNeedsOnboarding(session)
-      set({ session, user: session.user, needsOnboarding })
+      set({ isAuthenticated: true, user: session.user, needsOnboarding })
     })
     return () => data.subscription.unsubscribe()
   },
 
   completeOnboarding() {
     set({ needsOnboarding: false })
+  },
+
+  async signIn(email, password) {
+    return supabase.auth.signInWithPassword({ email, password })
+  },
+
+  async signUp(email, password) {
+    return supabase.auth.signUp({ email, password })
+  },
+
+  async signInWithOAuth(provider) {
+    return supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin },
+    })
+  },
+
+  async signOut(options) {
+    return supabase.auth.signOut(options)
   },
 }))
 

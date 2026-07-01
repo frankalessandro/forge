@@ -1,71 +1,17 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Trophy, ChevronRight } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
 import PageHeader from '../../components/ui/PageHeader'
 import Stat from '../../components/ui/Stat'
-import { displayWeight } from '../../utils/weight'
-
-function formatDuration(startedAt, finishedAt) {
-  const ms = new Date(finishedAt) - new Date(startedAt)
-  const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function calcVolume(sets) {
-  return sets.filter((s) => s.set_type !== 'warmup').reduce((acc, s) => acc + (s.reps ?? 0) * displayWeight(s.weight_kg, s.exercises?.equipment), 0)
-}
-
-function bestSet(sets) {
-  const working = sets.filter((s) => s.set_type !== 'warmup' && (s.weight_kg ?? 0) > 0)
-  if (!working.length) return null
-  return working.reduce((best, s) => ((s.weight_kg ?? 0) > (best.weight_kg ?? 0) ? s : best))
-}
-
-const SET_TYPE_LABEL = { normal: null, warmup: 'Calent.', dropset: 'Dropset', failure: 'Fallo' }
-const SET_TYPE_COLOR = { warmup: 'text-amber-300', dropset: 'text-fuchsia-300', failure: 'text-red-300' }
+import { calcVolume } from '../../utils/weight'
+import { formatDuration } from '../../utils/duration'
+import { bestSet, SET_TYPE_LABEL, SET_TYPE_COLOR } from '../../utils/workoutSets'
+import { useSessionDetail } from '../../hooks/useSessionDetail'
 
 export function SessionDetail({ title, back, sessionId, hero, cta }) {
   const navigate = useNavigate()
-  const [session, setSession] = useState(null)
-  const [groupedSets, setGroupedSets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (!sessionId) return
-    async function load() {
-      const { data: sess, error: sessErr } = await supabase
-        .from('workout_sessions')
-        .select('id, started_at, finished_at, notes')
-        .eq('id', sessionId)
-        .single()
-      if (sessErr) { setError(sessErr.message); setLoading(false); return }
-
-      const { data: sets, error: setsErr } = await supabase
-        .from('workout_sets')
-        .select('id, exercise_id, set_number, reps, weight_kg, set_type, completed_at, exercises(name, equipment)')
-        .eq('session_id', sessionId)
-        .order('set_number')
-      if (setsErr) { setError(setsErr.message); setLoading(false); return }
-
-      const map = new Map()
-      for (const s of sets ?? []) {
-        const name = s.exercises?.name ?? 'Ejercicio'
-        if (!map.has(s.exercise_id)) map.set(s.exercise_id, { exerciseId: s.exercise_id, name, sets: [] })
-        map.get(s.exercise_id).sets.push(s)
-      }
-      setSession(sess)
-      setGroupedSets([...map.values()])
-      setLoading(false)
-    }
-    load()
-  }, [sessionId])
+  const { data, loading, error } = useSessionDetail(sessionId)
+  const session = data?.session ?? null
+  const groupedSets = data?.groupedSets ?? []
 
   const totalVolume = calcVolume(groupedSets.flatMap((g) => g.sets))
 

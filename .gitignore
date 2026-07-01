@@ -33,7 +33,7 @@ dist-ssr
 
 # Claude Code
 CLAUDE.md
-.claude/settings.local.json
+.claude/
 
 # Supabase local dev
 supabase/.branches

@@ -3,11 +3,14 @@ import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
 import { displayWeight } from '../utils/weight'
 
-// Ejercicios con logros de categoría específica
+// Ejercicios con logros de categoría específica. Se referencian por `slug`
+// (estable, ver 20260701000001_exercises_achievement_slug.sql) en vez de por
+// `name`: si el ejercicio se renombra en el catálogo, el logro sigue
+// trackeándose en vez de dejar de funcionar en silencio.
 const EXERCISE_CATEGORY_MAP = {
-  bench:    'Bench Press',
-  squat:    'Barbell Squat',
-  deadlift: 'Deadlift',
+  bench:    'bench_press',
+  squat:    'barbell_squat',
+  deadlift: 'deadlift',
 }
 
 function toDateStr(date) {
@@ -88,14 +91,14 @@ export function useAchievements() {
       stats.maxStreak = longestStreak(list.map((s) => toDateStr(s.started_at)))
 
       // Obtener IDs de los ejercicios con categoría específica
-      const { data: namedExercises } = await supabase
+      const { data: slugExercises } = await supabase
         .from('exercises')
-        .select('id, name')
-        .in('name', Object.values(EXERCISE_CATEGORY_MAP))
+        .select('id, slug')
+        .in('slug', Object.values(EXERCISE_CATEGORY_MAP))
 
       const exerciseIdToCat = {}
-      for (const e of namedExercises ?? []) {
-        const cat = Object.entries(EXERCISE_CATEGORY_MAP).find(([, n]) => n === e.name)?.[0]
+      for (const e of slugExercises ?? []) {
+        const cat = Object.entries(EXERCISE_CATEGORY_MAP).find(([, slug]) => slug === e.slug)?.[0]
         if (cat) exerciseIdToCat[e.id] = cat
       }
 

@@ -1,0 +1,53 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+
+// Sesión + series agrupadas por ejercicio, para las vistas de detalle de
+// entrenamiento (historial propio y de amigos).
+export function useSessionDetail(sessionId) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!sessionId) return
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setError(null)
+
+      const { data: sess, error: sessErr } = await supabase
+        .from('workout_sessions')
+        .select('id, started_at, finished_at, notes')
+        .eq('id', sessionId)
+        .single()
+
+      if (cancelled) return
+      if (sessErr) { setError(sessErr.message); setLoading(false); return }
+
+      const { data: sets, error: setsErr } = await supabase
+        .from('workout_sets')
+        .select('id, exercise_id, set_number, reps, weight_kg, set_type, completed_at, exercises(name, equipment)')
+        .eq('session_id', sessionId)
+        .order('set_number')
+
+      if (cancelled) return
+      if (setsErr) { setError(setsErr.message); setLoading(false); return }
+
+      const map = new Map()
+      for (const s of sets ?? []) {
+        const name = s.exercises?.name ?? 'Ejercicio'
+        if (!map.has(s.exercise_id)) map.set(s.exercise_id, { exerciseId: s.exercise_id, name, sets: [] })
+        map.get(s.exercise_id).sets.push(s)
+      }
+
+      setData({ session: sess, groupedSets: [...map.values()] })
+      setLoading(false)
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [sessionId])
+
+  return { data, loading, error }
+}

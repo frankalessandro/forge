@@ -14,6 +14,13 @@ const metaSchema = z.object({
   category: z.string().optional().or(z.literal('')),
 })
 
+const itemSchema = z.object({
+  exercise_id: z.string(),
+  sets: z.number().int('Series debe ser un número entero').min(1, 'Series debe ser al menos 1').max(20, 'Máximo 20 series'),
+  reps: z.number().int('Reps debe ser un número entero').min(1, 'Reps debe ser al menos 1').max(100, 'Máximo 100 reps'),
+  rest_seconds: z.number().int('El descanso debe ser un número entero').min(0, 'El descanso no puede ser negativo').max(600, 'Máximo 600 segundos'),
+})
+
 function NumberField({ label, value, min, max, onChange }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -76,12 +83,18 @@ export default function RoutineEditor() {
   const [errors, setErrors] = useState({})
   const [saveError, setSaveError] = useState(null)
   const [saving, setSaving] = useState(false)
+  // Si createRoutine tiene éxito pero replaceRoutineExercises falla después,
+  // guardamos el id ya creado para que un reintento actualice esa rutina en
+  // vez de crear una duplicada.
+  const [createdRoutineId, setCreatedRoutineId] = useState(null)
 
   useEffect(() => {
     if (!isEdit) return
+    let cancelled = false
     async function load() {
       try {
         const data = await getRoutineDetail(id)
+        if (cancelled) return
         setName(data.name ?? '')
         setDescription(data.description ?? '')
         setCategory(data.category ?? '')
@@ -96,12 +109,13 @@ export default function RoutineEditor() {
           }))
         )
       } catch (err) {
-        setSaveError(err.message)
+        if (!cancelled) setSaveError(err.message)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [id, isEdit, getRoutineDetail])
 
   const handleAddExercise = (exercise) => {
@@ -150,18 +164,33 @@ export default function RoutineEditor() {
       return
     }
 
-    const cleanItems = items.map((it) => ({
-      exercise_id: it.exercise_id,
-      sets: it.sets === '' ? 3 : it.sets,
-      reps: it.reps === '' ? 10 : it.reps,
-      rest_seconds: it.rest_seconds === '' ? 90 : it.rest_seconds,
-    }))
+    const itemsResult = z.array(itemSchema).safeParse(
+      items.map((it) => ({
+        exercise_id: it.exercise_id,
+        sets: it.sets === '' ? 3 : it.sets,
+        reps: it.reps === '' ? 10 : it.reps,
+        rest_seconds: it.rest_seconds === '' ? 90 : it.rest_seconds,
+      }))
+    )
+    if (!itemsResult.success) {
+      setSaveError(itemsResult.error.issues[0]?.message ?? 'Revisa los valores de series, reps y descanso.')
+      return
+    }
+    setErrors({})
+
+    const cleanItems = itemsResult.data
 
     try {
       setSaving(true)
       const payload = { name: name.trim(), description, category }
-      const routineId = isEdit ? id : await createRoutine(payload)
-      if (isEdit) await updateRoutine(id, payload)
+      const existingId = isEdit ? id : createdRoutineId
+      let routineId = existingId
+      if (existingId) {
+        await updateRoutine(existingId, payload)
+      } else {
+        routineId = await createRoutine(payload)
+        setCreatedRoutineId(routineId)
+      }
       await replaceRoutineExercises(routineId, cleanItems)
       navigate(`/app/routines/${routineId}`, { replace: true })
     } catch (err) {

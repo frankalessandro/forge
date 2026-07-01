@@ -4,15 +4,8 @@ import { Flame, Dumbbell, Layers, Trophy, Lock, ChevronRight } from 'lucide-reac
 import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
+import { GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
-
-const GOAL_LABELS = {
-  lose_fat: 'Perder grasa',
-  gain_muscle: 'Ganar músculo',
-  strength: 'Fuerza',
-  endurance: 'Resistencia',
-  health: 'Salud general',
-}
 
 // Una fila de comparación amigo vs. yo. Resalta a quien va por delante.
 function CompareRow({ icon: Icon, label, mine, theirs, unit, format = (v) => v }) {

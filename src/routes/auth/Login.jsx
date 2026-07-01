@@ -3,9 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, Link } from 'react-router-dom'
 import { Dumbbell } from 'lucide-react'
-import { useState } from 'react'
 import { sileo } from 'sileo'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
+import { useOAuthLogin } from '../../hooks/useOAuthLogin'
 
 const loginSchema = z.object({
   email: z.string().email('Ingresa un email válido'),
@@ -14,7 +14,8 @@ const loginSchema = z.object({
 
 export default function Login() {
   const navigate = useNavigate()
-  const [oauthLoading, setOauthLoading] = useState(null)
+  const signIn = useAuthStore((s) => s.signIn)
+  const { oauthLoading, handleOAuth } = useOAuthLogin()
 
   const {
     register,
@@ -24,7 +25,7 @@ export default function Login() {
   } = useForm({ resolver: zodResolver(loginSchema) })
 
   const onSubmit = async ({ email, password }) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await signIn(email, password)
     if (error) {
       sileo.error({ title: 'Credenciales incorrectas', description: 'Revisá tu email y contraseña.' })
       setError('root', { message: 'Email o contraseña incorrectos' })
@@ -32,18 +33,6 @@ export default function Login() {
     }
     sileo.success({ title: '¡Bienvenido de vuelta!' })
     navigate('/')
-  }
-
-  const handleOAuth = async (provider) => {
-    setOauthLoading(provider)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) {
-      sileo.error({ title: 'Error al conectar', description: error.message })
-      setOauthLoading(null)
-    }
   }
 
   return (

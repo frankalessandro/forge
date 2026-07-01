@@ -3,35 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Dumbbell } from 'lucide-react'
 import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
-
-function formatDuration(startedAt, finishedAt) {
-  const ms = new Date(finishedAt) - new Date(startedAt)
-  const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function formatDay(isoStr) {
-  const d = new Date(isoStr)
-  return d.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
-function formatHour(isoStr) {
-  return new Date(isoStr).toTimeString().slice(0, 5)
-}
-
-function Metric({ value, label }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="stat-num text-base text-zinc-100">{value}</span>
-      <span className="eyebrow">{label}</span>
-    </div>
-  )
-}
+import Metric from '../../components/ui/Metric'
+import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 
 export default function FriendWorkouts() {
   const { userId } = useParams()

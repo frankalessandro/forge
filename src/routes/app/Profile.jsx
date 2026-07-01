@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogOut, Info, Users, Pencil } from 'lucide-react'
 import { useConfirm } from '../../hooks/useConfirm'
-import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
 import { useProfile } from '../../hooks/useProfile'
 import { useAchievements } from '../../hooks/useAchievements'
 import { useFriends } from '../../hooks/useFriends'
@@ -39,6 +39,7 @@ export default function Profile() {
   const { getProfile, addBodyStat, getBodyStats } = useProfile()
   const { getCatalog, getUnlocked, checkAndUnlock } = useAchievements()
   const { listFriends } = useFriends()
+  const signOut = useAuthStore((s) => s.signOut)
 
   const { confirm, modal } = useConfirm()
   const [loading, setLoading] = useState(true)
@@ -113,7 +114,7 @@ export default function Profile() {
     // revocarla en el server. Si eso falla o se cuelga, antes nunca se llegaba
     // al navigate y la app quedaba colgada en la pantalla de perfil.
     try {
-      await supabase.auth.signOut({ scope: 'local' })
+      await signOut({ scope: 'local' })
     } catch {
       // seguimos igual: lo importante es sacar al usuario de la sesión local
     }

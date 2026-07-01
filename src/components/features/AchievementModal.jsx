@@ -1,17 +1,6 @@
 import { createElement, useEffect } from 'react'
 import { X, Lock, Check } from 'lucide-react'
-import { iconFor } from '../../utils/achievementIcons'
-
-const CATEGORY_LABELS = {
-  streak:   'Constancia',
-  workouts: 'Entrenos',
-  volume:   'Volumen',
-  strength: 'Fuerza',
-  bench:    'Press de Banca',
-  squat:    'Sentadilla',
-  deadlift: 'Peso Muerto',
-  prs:      'Récords Personales',
-}
+import { iconFor, CATEGORY_LABELS } from '../../utils/achievementIcons'
 
 // Componente declarado fuera del render: resuelve el ícono dinámico a partir del
 // nombre sin crear un componente nuevo en cada render.
