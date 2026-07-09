@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 
 export const useExerciseStore = create((set) => ({
-  muscleGroupId: null,
+  bodyPart: null,
   equipment: null,
   search: '',
 
-  setMuscleGroup: (id) => set({ muscleGroupId: id }),
+  setBodyPart: (bp) => set({ bodyPart: bp }),
   setEquipment: (eq) => set({ equipment: eq }),
   setSearch: (s) => set({ search: s }),
-  resetFilters: () => set({ muscleGroupId: null, equipment: null, search: '' }),
+  resetFilters: () => set({ bodyPart: null, equipment: null, search: '' }),
 }))
