@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Dumbbell } from 'lucide-react'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useSchedule, DAY_ROWS } from '../../hooks/useSchedule'
 import ExercisePicker from '../../components/features/ExercisePicker'
@@ -44,6 +44,18 @@ function ExerciseRow({ item, index, total, onChange, onMove, onRemove }) {
     <div className="card p-4">
       <div className="flex items-start gap-3 mb-3">
         <GripVertical size={16} className="text-zinc-700 mt-1 shrink-0" />
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.name}
+            className="w-10 h-10 rounded-lg object-cover bg-ink-900 shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-lg bg-ink-900 flex items-center justify-center shrink-0">
+            <Dumbbell size={14} className="text-zinc-700" />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <p className="display text-sm text-zinc-100 truncate">{item.name}</p>
           {item.muscle && <p className="text-xs text-zinc-500">{item.muscle}</p>}
@@ -116,6 +128,7 @@ export default function RoutineEditor() {
           data.routine_exercises.map((re) => ({
             exercise_id: re.exercise_id,
             name: re.exercises?.name_es ?? re.exercises?.name ?? 'Ejercicio',
+            image_url: re.exercises?.image_url ?? '',
             muscle: re.exercises?.muscle_groups?.name_es ?? re.exercises?.muscle_groups?.name ?? '',
             sets: re.sets ?? 3,
             reps: re.reps ?? 10,
@@ -156,6 +169,7 @@ export default function RoutineEditor() {
       {
         exercise_id: exercise.id,
         name: exercise.name_es ?? exercise.name,
+        image_url: exercise.image_url ?? '',
         muscle: exercise.muscle_groups?.name_es ?? exercise.muscle_groups?.name ?? '',
         sets: 3,
         reps: 10,
