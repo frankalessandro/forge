@@ -1,17 +1,37 @@
-// Paleta fija de 8 colores para el tag de rutina. El usuario elige el color
-// al crear/editar la rutina (no se infiere del texto), se guarda en
-// routines.category_color y viaja junto al tag.
+// El tag libre de rutina elige color de una paleta fija de 12 (no es texto
+// libre ni un color picker arbitrario). Se guarda el hex directo en
+// routines.category_color — la tabla acepta cualquier hex válido, así que
+// esto no requiere ninguna migración especial, solo restringimos las
+// opciones acá en el front.
 export const TAG_COLORS = [
-  { key: 'lime', label: 'Lima', chip: 'bg-accent/15 text-accent', dot: 'bg-accent' },
-  { key: 'sky', label: 'Cielo', chip: 'bg-sky-400/15 text-sky-300', dot: 'bg-sky-400' },
-  { key: 'fuchsia', label: 'Fucsia', chip: 'bg-fuchsia-400/15 text-fuchsia-300', dot: 'bg-fuchsia-400' },
-  { key: 'amber', label: 'Ámbar', chip: 'bg-amber-400/15 text-amber-300', dot: 'bg-amber-400' },
-  { key: 'rose', label: 'Rosa', chip: 'bg-rose-400/15 text-rose-300', dot: 'bg-rose-400' },
-  { key: 'violet', label: 'Violeta', chip: 'bg-violet-400/15 text-violet-300', dot: 'bg-violet-400' },
-  { key: 'cyan', label: 'Cian', chip: 'bg-cyan-400/15 text-cyan-300', dot: 'bg-cyan-400' },
-  { key: 'orange', label: 'Naranja', chip: 'bg-orange-400/15 text-orange-300', dot: 'bg-orange-400' },
+  { key: 'lime', label: 'Lima', hex: '#a3e635' },
+  { key: 'sky', label: 'Cielo', hex: '#38bdf8' },
+  { key: 'fuchsia', label: 'Fucsia', hex: '#e879f9' },
+  { key: 'amber', label: 'Ámbar', hex: '#fbbf24' },
+  { key: 'rose', label: 'Rosa', hex: '#fb7185' },
+  { key: 'violet', label: 'Violeta', hex: '#a78bfa' },
+  { key: 'cyan', label: 'Cian', hex: '#22d3ee' },
+  { key: 'orange', label: 'Naranja', hex: '#fb923c' },
+  { key: 'emerald', label: 'Esmeralda', hex: '#34d399' },
+  { key: 'indigo', label: 'Índigo', hex: '#818cf8' },
+  { key: 'pink', label: 'Rosa fuerte', hex: '#f472b6' },
+  { key: 'teal', label: 'Verde azulado', hex: '#2dd4bf' },
 ]
 
-export function tagChipClass(color) {
-  return TAG_COLORS.find((c) => c.key === color)?.chip ?? 'bg-ink-800 text-zinc-400'
+export const DEFAULT_TAG_COLOR = TAG_COLORS[0].hex // lima, mismo tono que el accent de la marca
+
+export function hexToRgba(hex, alpha = 1) {
+  const clean = (hex ?? '').replace('#', '')
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+  const bigint = parseInt(full, 16)
+  if (Number.isNaN(bigint) || full.length !== 6) return `rgba(163, 230, 53, ${alpha})`
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+export function tagChipStyle(color) {
+  if (!color) return undefined
+  return { backgroundColor: hexToRgba(color, 0.15), color }
 }

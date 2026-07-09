@@ -7,7 +7,7 @@ export function useRoutines() {
   const getPublicRoutines = useCallback(async () => {
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('is_public', true)
       .order('category')
     if (error) throw error
@@ -21,7 +21,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', false)
       .order('created_at', { ascending: false })
@@ -36,7 +36,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', true)
       .order('created_at', { ascending: true })
@@ -51,11 +51,11 @@ export function useRoutines() {
     const { data, error } = await supabase
       .from('routines')
       .select(`
-        id, name, description, category, category_color, user_id, is_public,
+        id, name, description, category, category_color, focus, user_id, is_public, is_generated,
         routine_exercises (
           id, sets, reps, rest_seconds, "order",
           exercise_id,
-          exercises ( name, muscle_groups ( name ) )
+          exercises ( name, name_es, image_url, muscle_groups ( name, name_es ) )
         )
       `)
       .eq('id', id)
@@ -67,7 +67,7 @@ export function useRoutines() {
     }
   }, [])
 
-  const createRoutine = useCallback(async ({ name, description, category, category_color }) => {
+  const createRoutine = useCallback(async ({ name, description, category, category_color, focus }) => {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
@@ -77,6 +77,7 @@ export function useRoutines() {
         description: description || null,
         category: category || null,
         category_color: category ? category_color || null : null,
+        focus: focus || null,
         is_public: false,
       })
       .select('id')
@@ -85,7 +86,7 @@ export function useRoutines() {
     return data.id
   }, [])
 
-  const updateRoutine = useCallback(async (id, { name, description, category, category_color }) => {
+  const updateRoutine = useCallback(async (id, { name, description, category, category_color, focus }) => {
     const { error } = await supabase
       .from('routines')
       .update({
@@ -93,6 +94,7 @@ export function useRoutines() {
         description: description || null,
         category: category || null,
         category_color: category ? category_color || null : null,
+        focus: focus || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -163,6 +165,7 @@ export function useRoutines() {
         name: routine.name,
         description: routine.description ?? null,
         category: routine.category ?? null,
+        focus: routine.focus ?? null,
         exercises: routine.exercises.map((it) => ({
           exercise_id: it.exercise_id,
           sets: it.sets,

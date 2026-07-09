@@ -3,14 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react'
 import { useRoutines } from '../../hooks/useRoutines'
+import { useSchedule, DAY_ROWS } from '../../hooks/useSchedule'
 import ExercisePicker from '../../components/features/ExercisePicker'
 import PageHeader from '../../components/ui/PageHeader'
-import { TAG_COLORS } from '../../utils/tagColors'
+import { TAG_COLORS, DEFAULT_TAG_COLOR } from '../../utils/tagColors'
+import { FOCUS_OPTIONS } from '../../utils/routineFocus'
 
 const metaSchema = z.object({
   name: z.string().trim().min(1, 'El nombre es requerido').max(80, 'Máximo 80 caracteres'),
   description: z.string().trim().max(280, 'Máximo 280 caracteres').optional().or(z.literal('')),
   category: z.string().trim().max(24, 'Máximo 24 caracteres').optional().or(z.literal('')),
+  focus: z.string().optional().or(z.literal('')),
 })
 
 const itemSchema = z.object({
@@ -71,12 +74,21 @@ export default function RoutineEditor() {
   const isEdit = Boolean(id)
   const navigate = useNavigate()
   const { getRoutineDetail, createRoutine, updateRoutine, replaceRoutineExercises } = useRoutines()
+  const { getWeeklyTemplate, setTemplateDay } = useSchedule()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [categoryColor, setCategoryColor] = useState('')
+  const [focus, setFocus] = useState('')
   const [items, setItems] = useState([])
+
+  // Día de plantilla semanal (opcional). '' = sin asignar — a diferencia de
+  // Schedule.jsx, acá "sin asignar" NO escribe nada en routine_schedule; solo
+  // se toca la tabla si el usuario elige explícitamente un día.
+  const [template, setTemplateArr] = useState(Array(7).fill(null))
+  const [scheduledDay, setScheduledDay] = useState('')
+  const [initialScheduledDay, setInitialScheduledDay] = useState('')
 
   const [loading, setLoading] = useState(isEdit)
   const [showPicker, setShowPicker] = useState(false)
@@ -99,11 +111,12 @@ export default function RoutineEditor() {
         setDescription(data.description ?? '')
         setCategory(data.category ?? '')
         setCategoryColor(data.category_color ?? '')
+        setFocus(data.focus ?? '')
         setItems(
           data.routine_exercises.map((re) => ({
             exercise_id: re.exercise_id,
-            name: re.exercises?.name ?? 'Ejercicio',
-            muscle: re.exercises?.muscle_groups?.name ?? '',
+            name: re.exercises?.name_es ?? re.exercises?.name ?? 'Ejercicio',
+            muscle: re.exercises?.muscle_groups?.name_es ?? re.exercises?.muscle_groups?.name ?? '',
             sets: re.sets ?? 3,
             reps: re.reps ?? 10,
             rest_seconds: re.rest_seconds ?? 90,
@@ -119,14 +132,31 @@ export default function RoutineEditor() {
     return () => { cancelled = true }
   }, [id, isEdit, getRoutineDetail])
 
+  useEffect(() => {
+    let cancelled = false
+    getWeeklyTemplate()
+      .then((tmpl) => {
+        if (cancelled) return
+        setTemplateArr(tmpl)
+        if (isEdit) {
+          const dow = tmpl.findIndex((r) => r?.id === id)
+          const value = dow === -1 ? '' : String(dow)
+          setScheduledDay(value)
+          setInitialScheduledDay(value)
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [getWeeklyTemplate, isEdit, id])
+
   const handleAddExercise = (exercise) => {
     setShowPicker(false)
     setItems((prev) => [
       ...prev,
       {
         exercise_id: exercise.id,
-        name: exercise.name,
-        muscle: exercise.muscle_groups?.name ?? '',
+        name: exercise.name_es ?? exercise.name,
+        muscle: exercise.muscle_groups?.name_es ?? exercise.muscle_groups?.name ?? '',
         sets: 3,
         reps: 10,
         rest_seconds: 90,
@@ -151,7 +181,7 @@ export default function RoutineEditor() {
 
   const handleSave = async () => {
     setSaveError(null)
-    const result = metaSchema.safeParse({ name, description, category })
+    const result = metaSchema.safeParse({ name, description, category, focus })
     if (!result.success) {
       const fieldErrors = {}
       for (const issue of result.error.issues) fieldErrors[issue.path[0]] = issue.message
@@ -188,7 +218,8 @@ export default function RoutineEditor() {
         name: name.trim(),
         description,
         category: trimmedCategory,
-        category_color: trimmedCategory ? categoryColor || 'lime' : '',
+        category_color: trimmedCategory ? categoryColor || DEFAULT_TAG_COLOR : '',
+        focus: focus || '',
       }
       const existingId = isEdit ? id : createdRoutineId
       let routineId = existingId
@@ -199,12 +230,24 @@ export default function RoutineEditor() {
         setCreatedRoutineId(routineId)
       }
       await replaceRoutineExercises(routineId, cleanItems)
+
+      const newDay = scheduledDay === '' ? null : Number(scheduledDay)
+      const oldDay = initialScheduledDay === '' ? null : Number(initialScheduledDay)
+      if (newDay !== oldDay) {
+        if (oldDay !== null) await setTemplateDay(oldDay, null)
+        if (newDay !== null) await setTemplateDay(newDay, routineId)
+        setInitialScheduledDay(scheduledDay)
+      }
+
       navigate(`/app/routines/${routineId}`, { replace: true })
     } catch (err) {
       setSaveError(err.message)
       setSaving(false)
     }
   }
+
+  const conflictRoutine = scheduledDay !== '' ? template[Number(scheduledDay)] : null
+  const hasConflict = conflictRoutine && conflictRoutine.id !== id
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -230,6 +273,38 @@ export default function RoutineEditor() {
                 {errors.description && <p className="text-xs text-red-400 mt-1">{errors.description}</p>}
               </div>
               <div>
+                <label className="field-label">Categoría (opcional)</label>
+                <select
+                  value={focus}
+                  onChange={(e) => setFocus(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Sin categoría</option>
+                  {FOCUS_OPTIONS.map((f) => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-zinc-600 mt-1">Idea general del enfoque, distinta del tag libre de abajo.</p>
+              </div>
+              <div>
+                <label className="field-label">Día de la semana (opcional)</label>
+                <select
+                  value={scheduledDay}
+                  onChange={(e) => setScheduledDay(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Sin asignar</option>
+                  {DAY_ROWS.map((d) => (
+                    <option key={d.dow} value={d.dow}>{d.label}</option>
+                  ))}
+                </select>
+                {hasConflict ? (
+                  <p className="text-xs text-amber-400 mt-1">Reemplazará a "{conflictRoutine.name}" ese día en tu agenda.</p>
+                ) : (
+                  <p className="text-xs text-zinc-600 mt-1">Si no eliges día, la rutina queda sin agendar (podés asignarla luego desde Agenda).</p>
+                )}
+              </div>
+              <div>
                 <label className="field-label">Tag (opcional)</label>
                 <input
                   type="text"
@@ -246,10 +321,11 @@ export default function RoutineEditor() {
                       <button
                         key={c.key}
                         type="button"
-                        onClick={() => setCategoryColor(c.key)}
+                        onClick={() => setCategoryColor(c.hex)}
                         aria-label={c.label}
-                        className={`w-7 h-7 rounded-full ${c.dot} transition-shadow ${
-                          (categoryColor || 'lime') === c.key ? 'ring-2 ring-offset-2 ring-offset-ink-900 ring-zinc-100' : ''
+                        style={{ backgroundColor: c.hex }}
+                        className={`w-7 h-7 rounded-full transition-shadow ${
+                          (categoryColor || DEFAULT_TAG_COLOR) === c.hex ? 'ring-2 ring-offset-2 ring-offset-ink-900 ring-zinc-100' : ''
                         }`}
                       />
                     ))}

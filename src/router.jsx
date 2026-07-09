@@ -17,6 +17,7 @@ const ExerciseDetail = lazy(() => import('./routes/app/ExerciseDetail'))
 const Routines = lazy(() => import('./routes/app/Routines'))
 const RoutineDetail = lazy(() => import('./routes/app/RoutineDetail'))
 const RoutineEditor = lazy(() => import('./routes/app/RoutineEditor'))
+const Schedule = lazy(() => import('./routes/app/Schedule'))
 const Start = lazy(() => import('./routes/app/workout/Start'))
 const Active = lazy(() => import('./routes/app/workout/Active'))
 const Summary = lazy(() => import('./routes/app/workout/Summary'))
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
           { path: 'routines/new', element: <RoutineEditor /> },
           { path: 'routines/:id', element: <RoutineDetail /> },
           { path: 'routines/:id/edit', element: <RoutineEditor /> },
+          { path: 'schedule', element: <Schedule /> },
           { path: 'workout/start', element: <Start /> },
           { path: 'workout/active', element: <Active /> },
           { path: 'workout/summary/:sessionId', element: <Summary /> },

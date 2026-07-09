@@ -72,6 +72,7 @@ const DAY = {
   push: {
     name: 'Push',
     category: 'PPL',
+    focus: 'push',
     slots: [
       { muscles: ['Chest'], count: 2, compound: true },
       { muscles: ['Shoulders'], count: 1, compound: true },
@@ -81,6 +82,7 @@ const DAY = {
   pull: {
     name: 'Pull',
     category: 'PPL',
+    focus: 'pull',
     slots: [
       { muscles: ['Lats', 'Trapezius'], count: 2, compound: true },
       { muscles: ['Biceps'], count: 1, compound: false },
@@ -90,6 +92,7 @@ const DAY = {
   legs: {
     name: 'Piernas',
     category: 'PPL',
+    focus: 'legs',
     slots: [
       { muscles: ['Quads'], count: 2, compound: true },
       { muscles: ['Hamstrings', 'Glutes'], count: 1, compound: true },
@@ -100,6 +103,7 @@ const DAY = {
   upper: {
     name: 'Tren superior',
     category: 'Upper Lower',
+    focus: 'upper_body',
     slots: [
       { muscles: ['Chest'], count: 1, compound: true },
       { muscles: ['Lats', 'Trapezius'], count: 2, compound: true },
@@ -111,6 +115,7 @@ const DAY = {
   lower: {
     name: 'Tren inferior',
     category: 'Upper Lower',
+    focus: 'lower_body',
     slots: [
       { muscles: ['Quads'], count: 2, compound: true },
       { muscles: ['Hamstrings', 'Glutes'], count: 2, compound: true },
@@ -121,6 +126,7 @@ const DAY = {
   full: {
     name: 'Full Body',
     category: 'Full Body',
+    focus: 'full_body',
     slots: [
       { muscles: ['Quads', 'Hamstrings', 'Glutes'], count: 1, compound: true },
       { muscles: ['Chest'], count: 1, compound: true },
@@ -249,6 +255,7 @@ export function planSplit({ goal, level = 'intermediate', daysPerWeek, exercises
       return {
         name: day.name,
         category: day.category,
+        focus: day.focus,
         description: `Generada para ${goalLabel}`,
         exercises: picked,
       }

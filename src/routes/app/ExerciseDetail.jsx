@@ -70,7 +70,9 @@ export default function ExerciseDetail() {
               <div className="flex flex-wrap gap-2">
                 {exercise.body_part && <span className="chip-muted capitalize">{exercise.body_part}</span>}
                 {exercise.target && <span className="chip-accent capitalize">{exercise.target}</span>}
-                {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
+                {exercise.muscle_groups && (
+                  <span className="chip-accent">{exercise.muscle_groups.name_es ?? exercise.muscle_groups.name}</span>
+                )}
                 {exercise.equipment && (
                   <span className="chip-muted capitalize"><Dumbbell size={12} className="inline mr-0.5" />{exercise.equipment}</span>
                 )}
