@@ -232,15 +232,17 @@ export function useWorkout() {
     useWorkoutStore.getState().cancelSession()
   }, [])
 
-  const getLastPerformance = useCallback(async (exerciseId) => {
+  // Última performance de VARIOS ejercicios en 2 queries totales (antes eran
+  // 2 por ejercicio: una rutina de 8 disparaba 16 queries al montar el entreno):
+  //   1) las sesiones finalizadas recientes (orden desc)
+  //   2) todos los sets de todos los ejercicios pedidos en esas sesiones
+  // Devuelve { [exerciseId]: sets } solo para los que tienen historial; los
+  // sets son de la sesión más reciente donde apareció ese ejercicio.
+  const getLastPerformances = useCallback(async (exerciseIds) => {
+    if (!exerciseIds?.length) return {}
     const userId = getCurrentUserId()
     const currentSessionId = useWorkoutStore.getState().session?.id
 
-    // Última vez que se hizo este ejercicio. Antes era un N+1 en serie (1 query
-    // de sesiones + 1 query por cada sesión hasta encontrar sets). Ahora son 2
-    // queries acotadas, independientes del número de ejercicios del entreno:
-    //   1) las sesiones finalizadas recientes (orden desc)
-    //   2) todos los sets de este ejercicio en esas sesiones, de una sola vez
     const { data: sessions } = await supabase
       .from('workout_sessions')
       .select('id')
@@ -250,25 +252,29 @@ export function useWorkout() {
       .order('finished_at', { ascending: false })
       .limit(10)
 
-    if (!sessions?.length) return null
+    if (!sessions?.length) return {}
 
     const ids = sessions.map((s) => s.id)
     const { data: rows } = await supabase
       .from('workout_sets')
-      .select('reps, weight_kg, set_type, set_number, session_id')
-      .eq('exercise_id', exerciseId)
+      .select('exercise_id, reps, weight_kg, set_type, set_number, session_id')
+      .in('exercise_id', exerciseIds)
       .in('session_id', ids)
       .order('set_number')
 
-    if (!rows?.length) return null
+    if (!rows?.length) return {}
 
-    // Elegimos la sesión más reciente (según el orden de `sessions`) que tenga
-    // sets de este ejercicio, y devolvemos sus sets ya ordenados por set_number.
-    const bySession = new Set(rows.map((r) => r.session_id))
-    const latestId = ids.find((id) => bySession.has(id))
-    return rows
-      .filter((r) => r.session_id === latestId)
-      .map(({ reps, weight_kg, set_type, set_number }) => ({ reps, weight_kg, set_type, set_number }))
+    const result = {}
+    for (const exId of exerciseIds) {
+      const exRows = rows.filter((r) => r.exercise_id === exId)
+      if (!exRows.length) continue
+      const bySession = new Set(exRows.map((r) => r.session_id))
+      const latestId = ids.find((id) => bySession.has(id))
+      result[exId] = exRows
+        .filter((r) => r.session_id === latestId)
+        .map(({ reps, weight_kg, set_type, set_number }) => ({ reps, weight_kg, set_type, set_number }))
+    }
+    return result
   }, [])
 
   return {
@@ -282,6 +288,6 @@ export function useWorkout() {
     deleteExercise,
     finishSession,
     cancelSession,
-    getLastPerformance,
+    getLastPerformances,
   }
 }

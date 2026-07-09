@@ -120,19 +120,12 @@ export function useRoutines() {
   }, [])
 
   // Genera un split de rutinas según el objetivo, nivel y días/semana del usuario.
-  // Trae el catálogo, arma el plan (lógica pura en routineTemplates) y persiste
-  // cada rutina con sus ejercicios. Devuelve las rutinas creadas.
+  // Trae el catálogo, arma el plan (lógica pura en routineTemplates) y lo
+  // persiste con UNA llamada RPC atómica: create_generated_routines borra las
+  // generadas anteriores e inserta el split completo en la misma transacción.
+  // Antes eran ~2 round-trips en serie por cada rutina del split, y un fallo
+  // a mitad de camino dejaba la generación incompleta.
   const generateForGoal = useCallback(async ({ goal, level, daysPerWeek }) => {
-    const userId = getCurrentUserId()
-
-    // Borra las rutinas generadas anteriores (routine_exercises se borra en cascade)
-    const { error: delError } = await supabase
-      .from('routines')
-      .delete()
-      .eq('user_id', userId)
-      .eq('is_generated', true)
-    if (delError) throw delError
-
     const { data: exercises, error: exError } = await supabase
       .from('exercises')
       .select('id, name, equipment, primary_muscles, muscle_groups(name)')
@@ -143,36 +136,21 @@ export function useRoutines() {
       throw new Error('No hay ejercicios suficientes para generar la rutina.')
     }
 
-    const created = []
-    for (const routine of plan) {
-      const { data: inserted, error: rError } = await supabase
-        .from('routines')
-        .insert({
-          user_id: userId,
-          name: routine.name,
-          description: routine.description ?? null,
-          category: routine.category ?? null,
-          is_public: false,
-          is_generated: true,
-        })
-        .select('id')
-        .single()
-      if (rError) throw rError
-
-      const rows = routine.exercises.map((it, idx) => ({
-        routine_id: inserted.id,
-        exercise_id: it.exercise_id,
-        sets: it.sets,
-        reps: it.reps,
-        rest_seconds: it.rest_seconds,
-        order: idx + 1,
-      }))
-      const { error: reError } = await supabase.from('routine_exercises').insert(rows)
-      if (reError) throw reError
-
-      created.push({ id: inserted.id, name: routine.name })
-    }
-    return created
+    const { data: created, error } = await supabase.rpc('create_generated_routines', {
+      p_routines: plan.map((routine) => ({
+        name: routine.name,
+        description: routine.description ?? null,
+        category: routine.category ?? null,
+        exercises: routine.exercises.map((it) => ({
+          exercise_id: it.exercise_id,
+          sets: it.sets,
+          reps: it.reps,
+          rest_seconds: it.rest_seconds,
+        })),
+      })),
+    })
+    if (error) throw error
+    return created ?? []
   }, [])
 
   return {

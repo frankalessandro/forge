@@ -338,7 +338,7 @@ export default function Active() {
   const { session, exercises, isActive, hasHydrated } = useWorkoutStore()
   const {
     addSet, syncExerciseSets, completeSet, deleteSet,
-    deleteExercise, finishSession, cancelSession, getLastPerformance,
+    deleteExercise, finishSession, cancelSession, getLastPerformances,
   } = useWorkout()
   const restTimer = useRestTimer()
   const { checkAndUnlock } = useAchievements()
@@ -520,17 +520,20 @@ export default function Active() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [])
 
-  // ── Última performance (se pide una sola vez por ejercicio) ──────────────
+  // ── Última performance (batcheada: una llamada para todos los pendientes) ─
+  // Al montar con una rutina de N ejercicios sale UNA petición (2 queries),
+  // no N; los ejercicios agregados después se piden en su propio batch.
   const requestedPerf = useRef(new Set())
   useEffect(() => {
-    exercises.forEach((ex) => {
-      if (requestedPerf.current.has(ex.exerciseId)) return
-      requestedPerf.current.add(ex.exerciseId)
-      getLastPerformance(ex.exerciseId)
-        .then((data) => setLastPerfs((p) => ({ ...p, [ex.exerciseId]: data })))
-        .catch(() => {})
-    })
-  }, [exercises, getLastPerformance])
+    const pending = exercises
+      .map((ex) => ex.exerciseId)
+      .filter((id) => !requestedPerf.current.has(id))
+    if (pending.length === 0) return
+    pending.forEach((id) => requestedPerf.current.add(id))
+    getLastPerformances(pending)
+      .then((byExercise) => setLastPerfs((p) => ({ ...p, ...byExercise })))
+      .catch(() => {})
+  }, [exercises, getLastPerformances])
 
   // ── Handlers estables (no disparan red por tecla: store ahora, DB diferido) ─
   const onWeight = useCallback((exId, idx, value) => {

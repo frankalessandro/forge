@@ -1,18 +1,7 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
-import { displayWeight } from '../utils/weight'
 import { buildWeeks, computeStreak, computeMaxStreak, getMonday } from '../utils/streak'
-
-// Ejercicios con logros de categoría específica. Se referencian por `slug`
-// (estable, ver 20260701000001_exercises_achievement_slug.sql) en vez de por
-// `name`: si el ejercicio se renombra en el catálogo, el logro sigue
-// trackeándose en vez de dejar de funcionar en silencio.
-const EXERCISE_CATEGORY_MAP = {
-  bench:    'bench_press',
-  squat:    'barbell_squat',
-  deadlift: 'deadlift',
-}
 
 // Semanas transcurridas desde la primera sesión hasta hoy (mínimo 1), para
 // construir el rango completo de semanas al calcular la mejor racha histórica.
@@ -56,139 +45,46 @@ export function useAchievements() {
     return data ?? []
   }, [])
 
+  // Los agregados (volumen, máximos, PRs) se calculan en Postgres vía RPC:
+  // antes se bajaban todas las sesiones + todos los sets del historial al
+  // cliente en cada visita al perfil. Solo viajan escalares + las fechas de
+  // sesión (una por sesión) para calcular la racha semanal con la misma
+  // lógica de utils/streak.js que usa el dashboard.
   const getStats = useCallback(async () => {
-    const userId = getCurrentUserId()
+    const { data, error } = await supabase.rpc('achievement_stats')
+    if (error) throw error
 
-    const [{ data: sessions }, { data: profile }] = await Promise.all([
-      supabase
-        .from('workout_sessions')
-        .select('id, started_at')
-        .eq('user_id', userId)
-        .not('finished_at', 'is', null),
-      supabase
-        .from('profiles')
-        .select('training_days_per_week')
-        .eq('user_id', userId)
-        .maybeSingle(),
-    ])
-
-    const list = sessions ?? []
     const stats = {
-      totalWorkouts: list.length,
-      totalVolume: 0,
-      maxSetWeight: 0,
+      totalWorkouts: data?.totalWorkouts ?? 0,
+      totalVolume: Number(data?.totalVolume) || 0,
+      maxSetWeight: Number(data?.maxSetWeight) || 0,
       maxStreak: 0,
       currentStreak: 0,
-      exerciseMaxWeights: { bench: 0, squat: 0, deadlift: 0 },
-      totalPRs: 0,
+      exerciseMaxWeights: {
+        bench: Number(data?.benchMax) || 0,
+        squat: Number(data?.squatMax) || 0,
+        deadlift: Number(data?.deadliftMax) || 0,
+      },
+      totalPRs: data?.totalPRs ?? 0,
     }
 
-    if (list.length > 0) {
-      // Racha unificada con el resto de la app: semanas consecutivas cumpliendo
-      // la meta de días/semana del usuario (no días de calendario seguidos).
-      const goal = profile?.training_days_per_week || 1
-      const dates = list.map((s) => s.started_at)
+    const dates = data?.sessionDates ?? []
+    if (dates.length > 0) {
+      const goal = data?.trainingDaysPerWeek || 1
       const oldest = dates.reduce((a, b) => (new Date(a) <= new Date(b) ? a : b))
       const weeks = buildWeeks(dates, goal, weeksSince(oldest))
       stats.maxStreak = computeMaxStreak(weeks)
       stats.currentStreak = computeStreak(weeks)
-
-      // Obtener IDs de los ejercicios con categoría específica
-      const { data: slugExercises } = await supabase
-        .from('exercises')
-        .select('id, slug')
-        .in('slug', Object.values(EXERCISE_CATEGORY_MAP))
-
-      const exerciseIdToCat = {}
-      for (const e of slugExercises ?? []) {
-        const cat = Object.entries(EXERCISE_CATEGORY_MAP).find(([, slug]) => slug === e.slug)?.[0]
-        if (cat) exerciseIdToCat[e.id] = cat
-      }
-
-      const { data: sets } = await supabase
-        .from('workout_sets')
-        .select('reps, weight_kg, set_type, session_id, exercise_id, exercises(equipment)')
-        .in('session_id', list.map((s) => s.id))
-
-      for (const s of sets ?? []) {
-        if (s.set_type === 'warmup') continue
-        const w = Number(s.weight_kg) || 0
-        const reps = Number(s.reps) || 0
-        stats.totalVolume += displayWeight(w, s.exercises?.equipment) * reps
-        if (w > stats.maxSetWeight) stats.maxSetWeight = w
-
-        const cat = exerciseIdToCat[s.exercise_id]
-        if (cat && w > stats.exerciseMaxWeights[cat]) stats.exerciseMaxWeights[cat] = w
-      }
-
     }
-
-    const { count } = await supabase
-      .from('personal_records')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-    stats.totalPRs = count ?? 0
 
     return stats
   }, [])
 
-  // Detecta PRs nuevos en el historial completo del usuario e inserta los que falten.
+  // Detecta e inserta PRs nuevos server-side (una sola llamada, sin bajar el
+  // historial al browser). La lógica vive en detect_prs() en Postgres.
   const detectAndLogPRs = useCallback(async () => {
-    const userId = getCurrentUserId()
-
-    const { data: sessions } = await supabase
-      .from('workout_sessions')
-      .select('id')
-      .eq('user_id', userId)
-      .not('finished_at', 'is', null)
-
-    const sessionIds = (sessions ?? []).map((s) => s.id)
-    if (sessionIds.length === 0) return
-
-    const { data: sets } = await supabase
-      .from('workout_sets')
-      .select('weight_kg, set_type, session_id, exercise_id')
-      .in('session_id', sessionIds)
-      .not('weight_kg', 'is', null)
-      .gt('weight_kg', 0)
-
-    // Máximo por ejercicio a partir de los sets
-    const setMaxByExercise = {}
-    for (const s of sets ?? []) {
-      if (s.set_type === 'warmup' || !s.exercise_id) continue
-      const w = Number(s.weight_kg)
-      if (!setMaxByExercise[s.exercise_id] || w > setMaxByExercise[s.exercise_id].weight) {
-        setMaxByExercise[s.exercise_id] = { weight: w, sessionId: s.session_id }
-      }
-    }
-
-    const exerciseIds = Object.keys(setMaxByExercise)
-    if (exerciseIds.length === 0) return
-
-    // PRs ya registrados
-    const { data: stored } = await supabase
-      .from('personal_records')
-      .select('exercise_id, weight_kg')
-      .eq('user_id', userId)
-      .in('exercise_id', exerciseIds)
-
-    const storedMax = {}
-    for (const r of stored ?? []) {
-      const w = Number(r.weight_kg)
-      if (!storedMax[r.exercise_id] || w > storedMax[r.exercise_id]) storedMax[r.exercise_id] = w
-    }
-
-    // Insertar PRs nuevos
-    const newPRs = []
-    for (const [exerciseId, data] of Object.entries(setMaxByExercise)) {
-      if (data.weight > (storedMax[exerciseId] ?? 0)) {
-        newPRs.push({ user_id: userId, exercise_id: exerciseId, weight_kg: data.weight, session_id: data.sessionId })
-      }
-    }
-
-    if (newPRs.length > 0) {
-      await supabase.from('personal_records').insert(newPRs)
-    }
+    const { error } = await supabase.rpc('detect_prs')
+    if (error) throw error
   }, [])
 
   const checkAndUnlock = useCallback(async () => {
