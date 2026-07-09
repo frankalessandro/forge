@@ -8,6 +8,7 @@ import { useAchievements } from '../../../hooks/useAchievements'
 import { sileo } from 'sileo'
 import { useConfirm } from '../../../hooks/useConfirm'
 import ExercisePicker from '../../../components/features/ExercisePicker'
+import TutorialGuide from '../../../components/features/TutorialGuide'
 import { isDumbbell, displayWeight } from '../../../utils/weight'
 
 const PERSIST_DELAY = 600
@@ -313,7 +314,7 @@ const ExerciseCard = memo(function ExerciseCard({
 function StatsBar({ exercises, elapsed }) {
   const { completedSets, volume } = calcStats(exercises)
   return (
-    <div className="bg-ink-950 border-b border-ink-800 px-5 py-2.5">
+    <div className="bg-ink-950 border-b border-ink-800 px-5 py-2.5" data-tutorial="workout-stats">
       <div className="max-w-2xl mx-auto grid grid-cols-3 text-center divide-x divide-ink-800">
         <div>
           <p className="stat-num text-xl text-accent">{elapsed}</p>
@@ -623,10 +624,14 @@ export default function Active() {
   return (
     <div className="min-h-screen bg-ink-950 pb-28" style={{ touchAction: 'pan-y' }}>
       {modal}
+      {/* La barra inferior propia del entreno es más alta que la tab bar */}
+      <TutorialGuide module="workout" buttonClassName="bottom-24 right-4" />
+
       <header className="bg-ink-900 border-b border-ink-800 px-5 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate('/app/dashboard')}
+            data-tutorial="workout-minimize"
             className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors -ml-1 p-1"
             aria-label="Minimizar entreno"
           >
@@ -668,6 +673,7 @@ export default function Active() {
           return (
             <div
               key={ex.exerciseId}
+              data-tutorial={index === 0 ? 'workout-exercise' : undefined}
               ref={(node) => {
                 if (node) itemRefs.current.set(ex.exerciseId, node)
                 else itemRefs.current.delete(ex.exerciseId)
@@ -714,11 +720,11 @@ export default function Active() {
 
       <div className="fixed bottom-0 inset-x-0 bg-ink-900 border-t border-ink-800 px-5 py-4 z-10 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto flex gap-3">
-          <button onClick={() => setShowPicker(true)} className="btn-dark px-4 py-3 text-sm shrink-0">
+          <button onClick={() => setShowPicker(true)} data-tutorial="workout-add" className="btn-dark px-4 py-3 text-sm shrink-0">
             <Plus size={16} />
             Ejercicio
           </button>
-          <button onClick={handleFinish} disabled={finishing} className="btn-accent flex-1 py-3 text-sm">
+          <button onClick={handleFinish} disabled={finishing} data-tutorial="workout-finish" className="btn-accent flex-1 py-3 text-sm">
             {finishing ? 'Guardando…' : 'Finalizar'}
           </button>
         </div>

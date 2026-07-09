@@ -9,6 +9,7 @@ import { levelFromActivity, splitLabel, GOAL_LABELS } from '../../utils/routineT
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 import FocusBadge from '../../components/ui/FocusBadge'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 function RoutineCard({ routine, onOpen }) {
   return (
@@ -166,15 +167,16 @@ export default function Routines() {
   return (
     <div className="min-h-screen bg-ink-950">
       {modal}
+      <TutorialGuide module="routines" />
       <PageHeader
         title="Rutinas"
         back="/app/dashboard"
         right={
           <div className="flex items-center gap-2">
-            <Link to="/app/schedule" className="btn-ghost px-2 py-1.5 text-xs">
+            <Link to="/app/schedule" data-tutorial="routines-schedule" className="btn-ghost px-2 py-1.5 text-xs">
               <CalendarDays size={15} />
             </Link>
-            <Link to="/app/routines/new" className="btn-accent px-3 py-1.5 text-xs">
+            <Link to="/app/routines/new" data-tutorial="routines-create" className="btn-accent px-3 py-1.5 text-xs">
               <Plus size={15} />
               Crear
             </Link>
@@ -188,7 +190,7 @@ export default function Routines() {
         )}
 
         {/* Generación por objetivo */}
-        <section className="card p-5">
+        <section className="card p-5" data-tutorial="routines-generate">
           <div className="flex items-start gap-4 mb-4">
             <div className="rounded-xl bg-accent/15 text-accent p-3 shrink-0">
               <Sparkles size={20} />
@@ -262,6 +264,7 @@ export default function Routines() {
         </Accordion>
 
         {/* Sección: Mis rutinas */}
+        <div data-tutorial="routines-mine">
         <Accordion
           icon={LayoutList}
           title="Mis rutinas"
@@ -291,6 +294,7 @@ export default function Routines() {
             ))
           )}
         </Accordion>
+        </div>
       </main>
     </div>
   )

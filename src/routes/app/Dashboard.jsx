@@ -6,6 +6,7 @@ import { useWorkoutStore } from '../../stores/workoutStore'
 import { useSchedule, resolveDay } from '../../hooks/useSchedule'
 import Stat from '../../components/ui/Stat'
 import FocusBadge from '../../components/ui/FocusBadge'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 function greeting() {
   const h = new Date().getHours()
@@ -33,6 +34,7 @@ function ActiveWorkoutBanner({ startedAt, exerciseCount }) {
   return (
     <Link
       to="/app/workout/active"
+      data-tutorial="start-workout"
       className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
     >
       <div className="absolute -right-6 -bottom-8 opacity-20">
@@ -79,6 +81,7 @@ function TodayBanner() {
   return (
     <Link
       to={today ? `/app/routines/${today.id}` : '/app/schedule'}
+      data-tutorial="today-banner"
       className="flex items-center gap-3 card card-hover px-4 py-3"
     >
       <div className="bg-ink-800 rounded-lg p-2 text-accent shrink-0">
@@ -103,6 +106,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="dashboard" />
       {/* Top bar */}
       <header className="max-w-2xl mx-auto px-5 pt-8 pb-2 flex items-end justify-between">
         <div>
@@ -130,6 +134,7 @@ export default function Dashboard() {
         ) : (
           <Link
             to="/app/workout/start"
+            data-tutorial="start-workout"
             className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
           >
             <div className="absolute -right-6 -bottom-8 opacity-20">
@@ -149,7 +154,7 @@ export default function Dashboard() {
         )}
 
         {/* Stats semana */}
-        <section>
+        <section data-tutorial="week-stats">
           <h2 className="section-title mb-3">Esta semana</h2>
           {loading ? (
             <div className="grid grid-cols-3 gap-3">

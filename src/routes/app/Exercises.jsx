@@ -5,6 +5,7 @@ import { useExercises } from '../../hooks/useExercises'
 import { useExerciseStore } from '../../stores/exerciseStore'
 import PageHeader from '../../components/ui/PageHeader'
 import AddToRoutineSheet from '../../components/features/AddToRoutineSheet'
+import TutorialGuide from '../../components/features/TutorialGuide'
 import { BODY_PARTS } from '../../utils/exerciseFilters'
 
 const EQUIPMENT_OPTIONS = [
@@ -50,10 +51,11 @@ export default function Exercises() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="exercises" />
       <PageHeader title="Ejercicios" back="/app/dashboard" />
 
       <main className="max-w-2xl mx-auto px-5 py-6">
-        <div className="relative mb-5">
+        <div className="relative mb-5" data-tutorial="exercise-search">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
@@ -105,11 +107,17 @@ export default function Exercises() {
             <p className="text-sm mt-1 text-zinc-600">Prueba con otros filtros</p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {exercises.map((ex) => (
-              <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover relative flex gap-3 p-3 items-center">
+          <div className="grid gap-3 sm:grid-cols-2" data-tutorial="exercise-list">
+            {exercises.map((ex, i) => (
+              <Link
+                key={ex.id}
+                to={`/app/exercises/${ex.id}`}
+                data-tutorial={i === 0 ? 'exercise-card' : undefined}
+                className="card card-hover relative flex gap-3 p-3 items-center"
+              >
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddExerciseId(ex.id) }}
+                  data-tutorial={i === 0 ? 'exercise-add' : undefined}
                   className="absolute top-2 right-2 p-1.5 rounded-full bg-ink-900/80 text-zinc-400 hover:text-accent transition-colors"
                   aria-label="Agregar a rutina"
                 >

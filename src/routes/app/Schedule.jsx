@@ -5,6 +5,7 @@ import { useRoutines } from '../../hooks/useRoutines'
 import { useSchedule, resolveDay, toDateKey, DAY_ROWS } from '../../hooks/useSchedule'
 import PageHeader from '../../components/ui/PageHeader'
 import FocusBadge from '../../components/ui/FocusBadge'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 const WEEKDAY_HEADERS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do']
 
@@ -187,6 +188,7 @@ export default function Schedule() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="schedule" />
       <PageHeader title="Agenda de rutinas" back="/app/routines" />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-8 pb-[calc(var(--nav-h)+2rem)]">
@@ -201,7 +203,7 @@ export default function Schedule() {
           </div>
         ) : (
           <>
-            <section className="space-y-3">
+            <section className="space-y-3" data-tutorial="schedule-week">
               <h2 className="section-title">Plantilla semanal</h2>
               <div className="card divide-y divide-ink-800">
                 {DAY_ROWS.map(({ dow, label }) => (
@@ -225,7 +227,7 @@ export default function Schedule() {
               )}
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3" data-tutorial="schedule-month">
               <div className="flex items-center justify-between">
                 <h2 className="section-title flex-1 capitalize">{MONTH_LABEL.format(monthCursor)}</h2>
                 <div className="flex items-center gap-1">

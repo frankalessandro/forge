@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, UserPlus, Check, X, ChevronRight, Clock, Users } from 'lucide-react'
 import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 function Avatar({ name, size = 'md' }) {
   const dim = size === 'sm' ? 'w-9 h-9 text-sm' : 'w-11 h-11 text-base'
@@ -93,6 +94,7 @@ export default function Friends() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="friends" />
       <PageHeader title="Amigos" back="/app/profile" />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-8">
@@ -102,7 +104,7 @@ export default function Friends() {
 
         {/* Buscar */}
         <section>
-          <div className="relative">
+          <div className="relative" data-tutorial="friends-search">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input
               type="text"
@@ -148,7 +150,7 @@ export default function Friends() {
 
         {/* Solicitudes entrantes */}
         {requests.length > 0 && (
-          <section>
+          <section data-tutorial="friends-requests">
             <h2 className="section-title mb-3">Solicitudes ({requests.length})</h2>
             <div className="space-y-2">
               {requests.map((r) => (
@@ -168,7 +170,7 @@ export default function Friends() {
         )}
 
         {/* Amigos */}
-        <section>
+        <section data-tutorial="friends-list">
           <h2 className="section-title mb-3">Mis amigos</h2>
           {loading ? (
             <div className="space-y-2">

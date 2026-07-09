@@ -10,6 +10,7 @@ import { rankForXp } from '../../utils/ranks'
 import PageHeader from '../../components/ui/PageHeader'
 import Sheet from '../../components/ui/Sheet'
 import RankCard from '../../components/features/RankCard'
+import TutorialGuide from '../../components/features/TutorialGuide'
 const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 import {
   ACTIVITY_LEVELS,
@@ -143,6 +144,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-ink-950">
       {modal}
+      <TutorialGuide module="profile" />
       <PageHeader
         title="Mi perfil"
         back="/app/dashboard"
@@ -164,7 +166,7 @@ export default function Profile() {
         ) : (
           <>
             {/* Cabecera */}
-            <div className="card p-5 space-y-4">
+            <div className="card p-5 space-y-4" data-tutorial="profile-card">
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
                   {profile?.avatar_url ? (
@@ -194,7 +196,7 @@ export default function Profile() {
               )}
 
               <div className="flex items-center gap-3">
-                <Link to="/app/friends" className="btn-dark flex-1 py-2.5 text-sm">
+                <Link to="/app/friends" data-tutorial="profile-friends" className="btn-dark flex-1 py-2.5 text-sm">
                   <Users size={15} />
                   {friendCount != null ? `${friendCount} amigos` : 'Amigos'}
                 </Link>
@@ -206,13 +208,13 @@ export default function Profile() {
             </div>
 
             {/* Rango — lleva a la vista de logros */}
-            <Link to="/app/profile/achievements" className="block">
+            <Link to="/app/profile/achievements" className="block" data-tutorial="profile-rank">
               <RankCard xp={xp} interactive />
             </Link>
 
             {/* Métricas */}
             {(bmiInfo || bmr || maxHR || weightRange) && (
-              <div className="space-y-4">
+              <div className="space-y-4" data-tutorial="profile-metrics">
                 <div className="flex items-center justify-between">
                   <h2 className="section-title">Tus métricas</h2>
                   <button
@@ -282,7 +284,7 @@ export default function Profile() {
             )}
 
             {/* Registrar peso */}
-            <div className="card p-5 space-y-4">
+            <div className="card p-5 space-y-4" data-tutorial="profile-weight">
               <h2 className="section-title">Registrar peso</h2>
 
               <form onSubmit={handleAddStat} className="flex gap-2">

@@ -8,20 +8,14 @@ import { useProfile } from '../../hooks/useProfile'
 import { useRoutines } from '../../hooks/useRoutines'
 import { levelFromActivity, GOALS, TRAINING_DAYS, MAX_GOALS } from '../../utils/routineTemplates'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
+import HeightPicker, { HEIGHT_MIN, HEIGHT_MAX } from '../../components/features/HeightPicker'
+import WeightPicker, { WEIGHT_MIN, WEIGHT_MAX } from '../../components/features/WeightPicker'
 import { AuthShell } from '../auth/Login'
 
-const STEPS = 6
+const STEPS = 7
 
-const measurementsSchema = z.object({
-  height_cm: z.string().refine(
-    (v) => v === '' || (Number(v) > 0 && Number(v) <= 300),
-    'Ingresa una altura válida (1-300 cm)'
-  ),
-  weight_kg: z.string().refine(
-    (v) => v === '' || (Number(v) > 0 && Number(v) <= 500),
-    'Ingresa un peso válido (1-500 kg)'
-  ),
-})
+const heightSchema = z.coerce.number().min(HEIGHT_MIN).max(HEIGHT_MAX)
+const weightSchema = z.coerce.number().min(WEIGHT_MIN).max(WEIGHT_MAX)
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -78,7 +72,6 @@ export default function Onboarding() {
     }
     // Guarda la foto de Google en el perfil
     if (meta.avatar_url) payload.avatar_url = meta.avatar_url
-    // También al saltar: que la encuesta no reaparezca en cada login.
     payload.onboarding_completed = true
 
     const { error } = await updateProfile(payload)
@@ -106,14 +99,19 @@ export default function Onboarding() {
   }
 
   const next = () => {
+    // Al entrar a un paso de medidas dejamos el valor por defecto ya aplicado:
+    // lo que muestra el picker y lo que se guarda siempre coinciden.
+    if (step === 2 && !data.height_cm) patch({ height_cm: '170' })
     if (step === 3) {
-      const result = measurementsSchema.safeParse({ height_cm: data.height_cm, weight_kg: data.weight_kg })
-      if (!result.success) {
-        const errors = {}
-        for (const issue of result.error.issues) errors[issue.path[0]] = issue.message
-        setFieldErrors(errors)
+      if (!heightSchema.safeParse(data.height_cm).success) {
+        setFieldErrors({ height_cm: `Ingresa una altura válida (${HEIGHT_MIN}-${HEIGHT_MAX} cm)` })
         return
       }
+      if (!data.weight_kg) patch({ weight_kg: '70' })
+    }
+    if (step === 4 && !weightSchema.safeParse(data.weight_kg).success) {
+      setFieldErrors({ weight_kg: `Ingresa un peso válido (${WEIGHT_MIN}-${WEIGHT_MAX} kg)` })
+      return
     }
     setFieldErrors({})
     setStep((s) => Math.min(s + 1, STEPS))
@@ -136,7 +134,7 @@ export default function Onboarding() {
         <Progress step={step} />
 
         {step === 1 && (
-          <Step eyebrow="Paso 1 de 6" title="¿Cómo te llamas?" subtitle="Así personalizamos tu experiencia.">
+          <Step eyebrow="Paso 1 de 7" title="¿Cómo te llamas?" subtitle="Así personalizamos tu experiencia.">
             <input
               autoFocus
               type="text"
@@ -150,7 +148,7 @@ export default function Onboarding() {
         )}
 
         {step === 2 && (
-          <Step eyebrow="Paso 2 de 6" title="Sobre ti" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
+          <Step eyebrow="Paso 2 de 7" title="Sobre ti" subtitle="Lo usamos para tu TMB, IMC y zonas de FC.">
             <label className="block mb-4">
               <span className="field-label">Fecha de nacimiento</span>
               <input
@@ -161,7 +159,7 @@ export default function Onboarding() {
               />
             </label>
             <span className="field-label">Género</span>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {GENDERS.map(({ value, label }) => {
                 const active = data.gender === value
                 return (
@@ -182,39 +180,21 @@ export default function Onboarding() {
         )}
 
         {step === 3 && (
-          <Step eyebrow="Paso 3 de 6" title="Tus medidas" subtitle="En kg y cm. Lo usamos para tu IMC y progreso.">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="field-label">Altura (cm)</span>
-                <input
-                  autoFocus
-                  type="number"
-                  step="0.1"
-                  value={data.height_cm}
-                  onChange={(e) => patch({ height_cm: e.target.value })}
-                  className="input text-center text-lg py-3"
-                  placeholder="175"
-                />
-                {fieldErrors.height_cm && <p className="text-xs text-red-400 mt-1">{fieldErrors.height_cm}</p>}
-              </label>
-              <label className="block">
-                <span className="field-label">Peso (kg)</span>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={data.weight_kg}
-                  onChange={(e) => patch({ weight_kg: e.target.value })}
-                  className="input text-center text-lg py-3"
-                  placeholder="70"
-                />
-                {fieldErrors.weight_kg && <p className="text-xs text-red-400 mt-1">{fieldErrors.weight_kg}</p>}
-              </label>
-            </div>
+          <Step eyebrow="Paso 3 de 7" title="¿Cuánto mides?" subtitle="En cm. Lo usamos para tu IMC y progreso.">
+            <HeightPicker value={data.height_cm} onChange={(v) => patch({ height_cm: String(v) })} />
+            {fieldErrors.height_cm && <p className="text-xs text-red-400 mt-2 text-center">{fieldErrors.height_cm}</p>}
           </Step>
         )}
 
         {step === 4 && (
-          <Step eyebrow="Paso 4 de 6" title="¿Qué tan activo eres?" subtitle="Lo usamos para calibrar tus rutinas.">
+          <Step eyebrow="Paso 4 de 7" title="¿Cuánto pesas?" subtitle="En kg. Podrás actualizarlo cuando quieras.">
+            <WeightPicker value={data.weight_kg} onChange={(v) => patch({ weight_kg: String(v) })} />
+            {fieldErrors.weight_kg && <p className="text-xs text-red-400 mt-2 text-center">{fieldErrors.weight_kg}</p>}
+          </Step>
+        )}
+
+        {step === 5 && (
+          <Step eyebrow="Paso 5 de 7" title="¿Qué tan activo eres?" subtitle="Lo usamos para calibrar tus rutinas.">
             <div className="space-y-2.5">
               {ACTIVITY_LEVELS.map(({ value, label, desc }) => {
                 const active = data.activity_level === value
@@ -239,9 +219,9 @@ export default function Onboarding() {
           </Step>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <Step
-            eyebrow="Paso 5 de 6"
+            eyebrow="Paso 6 de 7"
             title="¿Cuántos días por semana?"
             subtitle="Esta es tu meta semanal: tu racha se mantiene mientras la cumplas, entrenes los días que entrenes."
           >
@@ -270,9 +250,9 @@ export default function Onboarding() {
           </Step>
         )}
 
-        {step === 6 && (
+        {step === 7 && (
           <Step
-            eyebrow="Paso 6 de 6"
+            eyebrow="Paso 7 de 7"
             title="¿Cuáles son tus objetivos?"
             subtitle="Elige hasta 3. El primero orienta tus rutinas generadas."
           >
@@ -323,14 +303,6 @@ export default function Onboarding() {
           )}
         </div>
       </div>
-
-      <button
-        onClick={finish}
-        disabled={saving}
-        className="block w-full text-center text-sm text-zinc-500 hover:text-zinc-300 mt-5 transition-colors"
-      >
-        Saltar por ahora
-      </button>
     </AuthShell>
   )
 }

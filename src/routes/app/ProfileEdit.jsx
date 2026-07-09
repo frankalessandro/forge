@@ -14,7 +14,7 @@ const profileSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').optional().or(z.literal('')),
   bio: z.string().max(160, 'Máximo 160 caracteres').optional().or(z.literal('')),
   birth_date: z.string().optional().or(z.literal('')),
-  gender: z.enum(['male', 'female', '']).optional(),
+  gender: z.enum(['male', 'female', 'other', '']).optional(),
   height_cm: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().positive().optional()),
   activity_level: z.enum(['sedentary', 'light', 'moderate', 'active', 'very_active', '']).optional(),
   training_days_per_week: z.preprocess(
