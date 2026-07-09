@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users } from 'lucide-react'
+import { Flame, Play, ClipboardList, Dumbbell, ChevronRight, Users, CalendarDays, Moon } from 'lucide-react'
 import { useDashboardStats } from '../../hooks/useDashboardStats'
 import { useWorkoutStore } from '../../stores/workoutStore'
+import { useSchedule, resolveDay } from '../../hooks/useSchedule'
 import Stat from '../../components/ui/Stat'
+import FocusBadge from '../../components/ui/FocusBadge'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 function greeting() {
   const h = new Date().getHours()
@@ -31,6 +34,7 @@ function ActiveWorkoutBanner({ startedAt, exerciseCount }) {
   return (
     <Link
       to="/app/workout/active"
+      data-tutorial="start-workout"
       className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
     >
       <div className="absolute -right-6 -bottom-8 opacity-20">
@@ -50,6 +54,51 @@ function ActiveWorkoutBanner({ startedAt, exerciseCount }) {
   )
 }
 
+function TodayBanner() {
+  const { getWeeklyTemplate, getExceptions } = useSchedule()
+  const [today, setToday] = useState(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const now = new Date()
+        const [template, exceptions] = await Promise.all([
+          getWeeklyTemplate(),
+          getExceptions(now, now),
+        ])
+        if (!cancelled) setToday(resolveDay(now, template, exceptions))
+      } catch {
+        if (!cancelled) setToday(null)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [getWeeklyTemplate, getExceptions])
+
+  if (today === undefined) return null
+
+  return (
+    <Link
+      to={today ? `/app/routines/${today.id}` : '/app/schedule'}
+      data-tutorial="today-banner"
+      className="flex items-center gap-3 card card-hover px-4 py-3"
+    >
+      <div className="bg-ink-800 rounded-lg p-2 text-accent shrink-0">
+        {today ? <CalendarDays size={16} /> : <Moon size={16} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="eyebrow">Hoy toca</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p className="text-sm text-zinc-100 truncate">{today ? today.name : 'Descanso'}</p>
+          {today && <FocusBadge focus={today.focus} />}
+        </div>
+      </div>
+      <ChevronRight size={16} className="text-zinc-600 shrink-0" />
+    </Link>
+  )
+}
+
 export default function Dashboard() {
   const { data: stats, loading, error } = useDashboardStats()
   const name = stats?.name || ''
@@ -57,6 +106,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="dashboard" />
       {/* Top bar */}
       <header className="max-w-2xl mx-auto px-5 pt-8 pb-2 flex items-end justify-between">
         <div>
@@ -76,12 +126,15 @@ export default function Dashboard() {
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
         )}
 
+        <TodayBanner />
+
         {/* HERO: empezar / entreno en curso */}
         {isActive && session ? (
           <ActiveWorkoutBanner startedAt={session.startedAt} exerciseCount={exercises.length} />
         ) : (
           <Link
             to="/app/workout/start"
+            data-tutorial="start-workout"
             className="relative block overflow-hidden rounded-3xl bg-accent text-ink-950 p-6 glow-accent group"
           >
             <div className="absolute -right-6 -bottom-8 opacity-20">
@@ -101,7 +154,7 @@ export default function Dashboard() {
         )}
 
         {/* Stats semana */}
-        <section>
+        <section data-tutorial="week-stats">
           <h2 className="section-title mb-3">Esta semana</h2>
           {loading ? (
             <div className="grid grid-cols-3 gap-3">

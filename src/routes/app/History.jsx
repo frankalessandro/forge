@@ -5,6 +5,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import Metric from '../../components/ui/Metric'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 import { useHistory } from '../../hooks/useHistory'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 export default function History() {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      <TutorialGuide module="history" />
       <PageHeader title="Progreso" back="/app/dashboard" />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-3">
@@ -35,12 +37,13 @@ export default function History() {
           </div>
         )}
 
-        {!loading && sessions.map((sess) => {
+        {!loading && sessions.map((sess, i) => {
           const stats = sessionStats[sess.id]
           return (
             <button
               key={sess.id}
               onClick={() => navigate(`/app/history/${sess.id}`)}
+              data-tutorial={i === 0 ? 'history-session' : undefined}
               className="w-full card card-hover p-4 text-left"
             >
               <div className="flex items-center justify-between">

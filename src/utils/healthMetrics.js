@@ -6,6 +6,7 @@
 export const GENDERS = [
   { value: 'male', label: 'Masculino' },
   { value: 'female', label: 'Femenino' },
+  { value: 'other', label: 'Otro' },
 ]
 
 export const ACTIVITY_LEVELS = [
@@ -51,6 +52,9 @@ export function calcBMR({ weightKg, heightCm, age, gender }) {
   const base = 10 * weightKg + 6.25 * heightCm - 5 * age
   if (gender === 'male') return base + 5
   if (gender === 'female') return base - 161
+  // Mifflin-St Jeor solo define hombre/mujer: para 'other' usamos el promedio
+  // de ambos ajustes ((+5 − 161) / 2 = −78) como estimación neutra.
+  if (gender === 'other') return base - 78
   return null
 }
 

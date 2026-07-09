@@ -1,11 +1,10 @@
-const CATEGORY_COLORS = {
-  PPL: 'bg-sky-400/15 text-sky-300',
-  'Full Body': 'bg-accent/15 text-accent',
-  'Upper Lower': 'bg-fuchsia-400/15 text-fuchsia-300',
-}
+import { tagChipStyle } from '../../utils/tagColors'
 
-export default function CategoryBadge({ category }) {
+export default function CategoryBadge({ category, color }) {
   if (!category) return null
-  const cls = CATEGORY_COLORS[category] ?? 'bg-ink-800 text-zinc-400'
-  return <span className={`chip ${cls}`}>{category}</span>
+  return (
+    <span className={`chip ${color ? '' : 'bg-ink-800 text-zinc-400'}`} style={tagChipStyle(color)}>
+      {category}
+    </span>
+  )
 }

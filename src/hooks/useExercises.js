@@ -15,7 +15,7 @@ function loadCatalog() {
   if (!catalogPromise) {
     catalogPromise = supabase
       .from('exercises')
-      .select('id, name, name_es, category, body_part, target, equipment, image_url, video_url, muscle_group_id, muscle_groups(id, name)')
+      .select('id, name, name_es, category, body_part, target, equipment, image_url, video_url, muscle_group_id, muscle_groups(id, name, name_es)')
       .order('name')
       .then(({ data, error }) => {
         if (error) {
@@ -88,7 +88,7 @@ export function useExercise(id) {
 
     supabase
       .from('exercises')
-      .select('*, muscle_groups(id, name, body_area)')
+      .select('*, muscle_groups(id, name, name_es, body_area)')
       .eq('id', id)
       .single()
       .then(({ data, error: err }) => {

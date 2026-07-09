@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { Play, Pencil } from 'lucide-react'
+import { Play, Pencil, Copy, Dumbbell } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
@@ -8,11 +8,12 @@ import { useWorkoutStore } from '../../stores/workoutStore'
 import { useConfirm } from '../../hooks/useConfirm'
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
+import FocusBadge from '../../components/ui/FocusBadge'
 
 export default function RoutineDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getRoutineDetail } = useRoutines()
+  const { getRoutineDetail, copyRoutine } = useRoutines()
   const { startSessionFromRoutine, cancelSession } = useWorkout()
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const { confirm, modal } = useConfirm()
@@ -20,6 +21,7 @@ export default function RoutineDetail() {
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [copying, setCopying] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -30,7 +32,10 @@ export default function RoutineDetail() {
         if (cancelled) return
         const userId = useAuthStore.getState().user?.id
         setRoutine(data)
-        setIsOwner(Boolean(userId && data.user_id === userId))
+        // Las rutinas generadas ("según tu objetivo") son solo una guía, igual
+        // que las predeterminadas: hay que agregarlas a "mis rutinas" antes de
+        // poder editarlas o entrenar directo desde ellas.
+        setIsOwner(Boolean(userId && data.user_id === userId && !data.is_generated))
       } catch (err) {
         if (!cancelled) setError(err.message)
       } finally {
@@ -63,6 +68,17 @@ export default function RoutineDetail() {
     } catch (err) {
       setError(err.message)
       setStarting(false)
+    }
+  }
+
+  const handleCopy = async () => {
+    try {
+      setCopying(true)
+      const newId = await copyRoutine(id)
+      navigate(`/app/routines/${newId}`)
+    } catch (err) {
+      setError(err.message)
+      setCopying(false)
     }
   }
 
@@ -99,7 +115,10 @@ export default function RoutineDetail() {
         ) : routine ? (
           <>
             <div>
-              <CategoryBadge category={routine.category} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <FocusBadge focus={routine.focus} />
+                <CategoryBadge category={routine.category} color={routine.category_color} />
+              </div>
               <h2 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 leading-none mt-2">
                 {routine.name}
               </h2>
@@ -117,22 +136,33 @@ export default function RoutineDetail() {
             </div>
 
             <div className="space-y-2.5">
-              {routine.routine_exercises.map((re, i) => (
+              {routine.routine_exercises.map((re) => (
                 <div key={re.id} className="card flex items-center gap-4 px-4 py-3.5">
-                  <span className="stat-num text-lg text-zinc-700 w-6 shrink-0">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
+                  {re.exercises?.image_url ? (
+                    <img
+                      src={re.exercises.image_url}
+                      alt=""
+                      className="w-12 h-12 rounded-lg object-cover bg-ink-900 shrink-0"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-ink-900 flex items-center justify-center shrink-0">
+                      <Dumbbell size={18} className="text-zinc-700" />
+                    </div>
+                  )}
                   <button
                     onClick={() => navigate(`/app/exercises/${re.exercise_id}`)}
                     className="flex-1 min-w-0 text-left"
                   >
-                    <p className="font-medium text-zinc-100 truncate">{re.exercises?.name}</p>
+                    <p className="font-medium text-zinc-100 truncate">{re.exercises?.name_es ?? re.exercises?.name}</p>
                     <p className="text-xs text-zinc-500 mt-0.5">
                       {re.sets} × {re.reps} · {re.rest_seconds}s descanso
                     </p>
                   </button>
-                  {re.exercises?.muscle_groups?.name && (
-                    <span className="chip-muted shrink-0">{re.exercises.muscle_groups.name}</span>
+                  {(re.exercises?.muscle_groups?.name_es ?? re.exercises?.muscle_groups?.name) && (
+                    <span className="chip-muted shrink-0">
+                      {re.exercises.muscle_groups.name_es ?? re.exercises.muscle_groups.name}
+                    </span>
                   )}
                 </div>
               ))}
@@ -145,10 +175,17 @@ export default function RoutineDetail() {
       {!loading && routine && (
         <div className="fixed bottom-[var(--nav-h)] inset-x-0 z-30 bg-ink-950/90 backdrop-blur-md border-t border-ink-800 px-5 py-4">
           <div className="max-w-2xl mx-auto">
-            <button onClick={handleStart} disabled={starting} className="btn-accent w-full py-3.5 text-sm">
-              <Play size={18} fill="currentColor" />
-              {starting ? 'Iniciando…' : 'Iniciar entrenamiento'}
-            </button>
+            {isOwner ? (
+              <button onClick={handleStart} disabled={starting} className="btn-accent w-full py-3.5 text-sm">
+                <Play size={18} fill="currentColor" />
+                {starting ? 'Iniciando…' : 'Iniciar entrenamiento'}
+              </button>
+            ) : (
+              <button onClick={handleCopy} disabled={copying} className="btn-accent w-full py-3.5 text-sm">
+                <Copy size={18} />
+                {copying ? 'Agregando…' : 'Agregar a mis rutinas'}
+              </button>
+            )}
           </div>
         </div>
       )}

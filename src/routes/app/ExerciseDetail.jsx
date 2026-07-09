@@ -1,9 +1,10 @@
 import { useState, lazy, Suspense } from 'react'
 import { useParams } from 'react-router-dom'
-import { Dumbbell, Trophy, TrendingUp } from 'lucide-react'
+import { Dumbbell, Trophy, TrendingUp, Plus } from 'lucide-react'
 import { useExercise, useExerciseVariations } from '../../hooks/useExercises'
 import { useExerciseHistory } from '../../hooks/useExerciseHistory'
 import ExerciseMedia from '../../components/features/ExerciseMedia'
+import AddToRoutineSheet from '../../components/features/AddToRoutineSheet'
 import PageHeader from '../../components/ui/PageHeader'
 const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 
@@ -38,10 +39,20 @@ function SkeletonDetail() {
 export default function ExerciseDetail() {
   const { id } = useParams()
   const { exercise, loading, error } = useExercise(id)
+  const [showAddSheet, setShowAddSheet] = useState(false)
 
   return (
     <div className="min-h-screen bg-ink-950">
-      <PageHeader title="Ejercicio" back={true} />
+      <PageHeader
+        title="Ejercicio"
+        back={true}
+        right={
+          <button onClick={() => setShowAddSheet(true)} className="btn-ghost text-sm px-2 py-1.5">
+            <Plus size={16} />
+            Agregar
+          </button>
+        }
+      />
 
       <main className="max-w-2xl mx-auto px-5 py-6">
         {loading && <SkeletonDetail />}
@@ -59,7 +70,9 @@ export default function ExerciseDetail() {
               <div className="flex flex-wrap gap-2">
                 {exercise.body_part && <span className="chip-muted capitalize">{exercise.body_part}</span>}
                 {exercise.target && <span className="chip-accent capitalize">{exercise.target}</span>}
-                {exercise.muscle_groups && <span className="chip-accent">{exercise.muscle_groups.name}</span>}
+                {exercise.muscle_groups && (
+                  <span className="chip-accent">{exercise.muscle_groups.name_es ?? exercise.muscle_groups.name}</span>
+                )}
                 {exercise.equipment && (
                   <span className="chip-muted capitalize"><Dumbbell size={12} className="inline mr-0.5" />{exercise.equipment}</span>
                 )}
@@ -103,6 +116,10 @@ export default function ExerciseDetail() {
 
         {!loading && !error && !exercise && <p className="text-zinc-500">Ejercicio no encontrado.</p>}
       </main>
+
+      {showAddSheet && (
+        <AddToRoutineSheet exerciseId={id} onClose={() => setShowAddSheet(false)} />
+      )}
     </div>
   )
 }

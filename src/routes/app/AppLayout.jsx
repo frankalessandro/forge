@@ -92,6 +92,7 @@ export default function AppLayout() {
               <div className="flex justify-center">
                 <button
                   onClick={() => setSheetOpen(true)}
+                  data-tutorial="quick-actions"
                   className="-mt-7 w-14 h-14 rounded-2xl bg-accent text-ink-950 flex items-center justify-center glow-accent hover:bg-accent-bright active:scale-95 transition-all"
                   aria-label="Acciones rápidas"
                 >

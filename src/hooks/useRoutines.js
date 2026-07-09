@@ -7,7 +7,7 @@ export function useRoutines() {
   const getPublicRoutines = useCallback(async () => {
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('is_public', true)
       .order('category')
     if (error) throw error
@@ -21,7 +21,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', false)
       .order('created_at', { ascending: false })
@@ -36,7 +36,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', true)
       .order('created_at', { ascending: true })
@@ -51,11 +51,11 @@ export function useRoutines() {
     const { data, error } = await supabase
       .from('routines')
       .select(`
-        id, name, description, category, user_id, is_public,
+        id, name, description, category, category_color, focus, user_id, is_public, is_generated,
         routine_exercises (
           id, sets, reps, rest_seconds, "order",
           exercise_id,
-          exercises ( name, muscle_groups ( name ) )
+          exercises ( name, name_es, image_url, muscle_groups ( name, name_es ) )
         )
       `)
       .eq('id', id)
@@ -67,7 +67,7 @@ export function useRoutines() {
     }
   }, [])
 
-  const createRoutine = useCallback(async ({ name, description, category }) => {
+  const createRoutine = useCallback(async ({ name, description, category, category_color, focus }) => {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
@@ -76,6 +76,8 @@ export function useRoutines() {
         name,
         description: description || null,
         category: category || null,
+        category_color: category ? category_color || null : null,
+        focus: focus || null,
         is_public: false,
       })
       .select('id')
@@ -84,13 +86,15 @@ export function useRoutines() {
     return data.id
   }, [])
 
-  const updateRoutine = useCallback(async (id, { name, description, category }) => {
+  const updateRoutine = useCallback(async (id, { name, description, category, category_color, focus }) => {
     const { error } = await supabase
       .from('routines')
       .update({
         name,
         description: description || null,
         category: category || null,
+        category_color: category ? category_color || null : null,
+        focus: focus || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -119,6 +123,26 @@ export function useRoutines() {
     if (error) throw error
   }, [])
 
+  // Copia una rutina (típicamente predeterminada) a una rutina propia nueva,
+  // metadata + routine_exercises, sin vínculo al origen. Devuelve el id nuevo.
+  const copyRoutine = useCallback(async (sourceRoutineId) => {
+    const { data, error } = await supabase.rpc('copy_routine_to_user', {
+      p_source_routine_id: sourceRoutineId,
+    })
+    if (error) throw error
+    return data
+  }, [])
+
+  // Agrega un ejercicio suelto a una rutina propia con valores default
+  // (3 series, 10 reps, 90s descanso), sin pasar por el editor completo.
+  const addExerciseToRoutine = useCallback(async (routineId, exerciseId) => {
+    const { error } = await supabase.rpc('add_exercise_to_routine', {
+      p_routine_id: routineId,
+      p_exercise_id: exerciseId,
+    })
+    if (error) throw error
+  }, [])
+
   // Genera un split de rutinas según el objetivo, nivel y días/semana del usuario.
   // Trae el catálogo, arma el plan (lógica pura en routineTemplates) y lo
   // persiste con UNA llamada RPC atómica: create_generated_routines borra las
@@ -141,6 +165,7 @@ export function useRoutines() {
         name: routine.name,
         description: routine.description ?? null,
         category: routine.category ?? null,
+        focus: routine.focus ?? null,
         exercises: routine.exercises.map((it) => ({
           exercise_id: it.exercise_id,
           sets: it.sets,
@@ -162,6 +187,8 @@ export function useRoutines() {
     updateRoutine,
     deleteRoutine,
     replaceRoutineExercises,
+    copyRoutine,
+    addExerciseToRoutine,
     generateForGoal,
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, ChevronDown, LayoutList, BookOpen } from 'lucide-react'
+import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, ChevronDown, LayoutList, BookOpen, CalendarDays } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useProfile } from '../../hooks/useProfile'
@@ -8,6 +8,8 @@ import { useConfirm } from '../../hooks/useConfirm'
 import { levelFromActivity, splitLabel, GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
+import FocusBadge from '../../components/ui/FocusBadge'
+import TutorialGuide from '../../components/features/TutorialGuide'
 
 function RoutineCard({ routine, onOpen }) {
   return (
@@ -15,7 +17,8 @@ function RoutineCard({ routine, onOpen }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
-          <CategoryBadge category={routine.category} />
+          <FocusBadge focus={routine.focus} />
+          <CategoryBadge category={routine.category} color={routine.category_color} />
         </div>
         {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
@@ -31,7 +34,8 @@ function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
       <button onClick={onOpen} className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-2 mb-1">
           <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
-          <CategoryBadge category={routine.category} />
+          <FocusBadge focus={routine.focus} />
+          <CategoryBadge category={routine.category} color={routine.category_color} />
         </div>
         {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
@@ -163,14 +167,20 @@ export default function Routines() {
   return (
     <div className="min-h-screen bg-ink-950">
       {modal}
+      <TutorialGuide module="routines" />
       <PageHeader
         title="Rutinas"
         back="/app/dashboard"
         right={
-          <Link to="/app/routines/new" className="btn-accent px-3 py-1.5 text-xs">
-            <Plus size={15} />
-            Crear
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/app/schedule" data-tutorial="routines-schedule" className="btn-ghost px-2 py-1.5 text-xs">
+              <CalendarDays size={15} />
+            </Link>
+            <Link to="/app/routines/new" data-tutorial="routines-create" className="btn-accent px-3 py-1.5 text-xs">
+              <Plus size={15} />
+              Crear
+            </Link>
+          </div>
         }
       />
 
@@ -180,7 +190,7 @@ export default function Routines() {
         )}
 
         {/* Generación por objetivo */}
-        <section className="card p-5">
+        <section className="card p-5" data-tutorial="routines-generate">
           <div className="flex items-start gap-4 mb-4">
             <div className="rounded-xl bg-accent/15 text-accent p-3 shrink-0">
               <Sparkles size={20} />
@@ -234,13 +244,7 @@ export default function Routines() {
             </div>
           ) : (
             generatedRoutines.map((r) => (
-              <UserRoutineCard
-                key={r.id}
-                routine={r}
-                onOpen={() => navigate(`/app/routines/${r.id}`)}
-                onEdit={() => navigate(`/app/routines/${r.id}/edit`)}
-                onDelete={() => handleDelete(r)}
-              />
+              <RoutineCard key={r.id} routine={r} onOpen={() => navigate(`/app/routines/${r.id}`)} />
             ))
           )}
         </Accordion>
@@ -260,6 +264,7 @@ export default function Routines() {
         </Accordion>
 
         {/* Sección: Mis rutinas */}
+        <div data-tutorial="routines-mine">
         <Accordion
           icon={LayoutList}
           title="Mis rutinas"
@@ -289,6 +294,7 @@ export default function Routines() {
             ))
           )}
         </Accordion>
+        </div>
       </main>
     </div>
   )
