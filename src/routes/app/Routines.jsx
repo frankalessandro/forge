@@ -15,7 +15,7 @@ function RoutineCard({ routine, onOpen }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
-          <CategoryBadge category={routine.category} />
+          <CategoryBadge category={routine.category} color={routine.category_color} />
         </div>
         {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
@@ -31,7 +31,7 @@ function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
       <button onClick={onOpen} className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-2 mb-1">
           <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
-          <CategoryBadge category={routine.category} />
+          <CategoryBadge category={routine.category} color={routine.category_color} />
         </div>
         {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>

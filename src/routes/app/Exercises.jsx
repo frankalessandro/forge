@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Dumbbell } from 'lucide-react'
+import { Search, Dumbbell, Plus } from 'lucide-react'
 import { useExercises } from '../../hooks/useExercises'
 import { useExerciseStore } from '../../stores/exerciseStore'
 import PageHeader from '../../components/ui/PageHeader'
+import AddToRoutineSheet from '../../components/features/AddToRoutineSheet'
 import { BODY_PARTS } from '../../utils/exerciseFilters'
 
 const EQUIPMENT_OPTIONS = [
@@ -38,6 +39,7 @@ function Pill({ label, active, onClick }) {
 export default function Exercises() {
   const { bodyPart, equipment, search, setBodyPart, setEquipment, setSearch } = useExerciseStore()
   const [searchInput, setSearchInput] = useState(search)
+  const [addExerciseId, setAddExerciseId] = useState(null)
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 300)
@@ -105,7 +107,14 @@ export default function Exercises() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {exercises.map((ex) => (
-              <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover flex gap-3 p-3 items-center">
+              <Link key={ex.id} to={`/app/exercises/${ex.id}`} className="card card-hover relative flex gap-3 p-3 items-center">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddExerciseId(ex.id) }}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-ink-900/80 text-zinc-400 hover:text-accent transition-colors"
+                  aria-label="Agregar a rutina"
+                >
+                  <Plus size={14} />
+                </button>
                 {ex.image_url ? (
                   <img
                     src={ex.image_url}
@@ -130,6 +139,10 @@ export default function Exercises() {
           </div>
         )}
       </main>
+
+      {addExerciseId && (
+        <AddToRoutineSheet exerciseId={addExerciseId} onClose={() => setAddExerciseId(null)} />
+      )}
     </div>
   )
 }

@@ -7,7 +7,7 @@ export function useRoutines() {
   const getPublicRoutines = useCallback(async () => {
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, routine_exercises(count)')
       .eq('is_public', true)
       .order('category')
     if (error) throw error
@@ -21,7 +21,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', false)
       .order('created_at', { ascending: false })
@@ -36,7 +36,7 @@ export function useRoutines() {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, routine_exercises(count)')
+      .select('id, name, description, category, category_color, routine_exercises(count)')
       .eq('user_id', userId)
       .eq('is_generated', true)
       .order('created_at', { ascending: true })
@@ -51,7 +51,7 @@ export function useRoutines() {
     const { data, error } = await supabase
       .from('routines')
       .select(`
-        id, name, description, category, user_id, is_public,
+        id, name, description, category, category_color, user_id, is_public,
         routine_exercises (
           id, sets, reps, rest_seconds, "order",
           exercise_id,
@@ -67,7 +67,7 @@ export function useRoutines() {
     }
   }, [])
 
-  const createRoutine = useCallback(async ({ name, description, category }) => {
+  const createRoutine = useCallback(async ({ name, description, category, category_color }) => {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
@@ -76,6 +76,7 @@ export function useRoutines() {
         name,
         description: description || null,
         category: category || null,
+        category_color: category ? category_color || null : null,
         is_public: false,
       })
       .select('id')
@@ -84,13 +85,14 @@ export function useRoutines() {
     return data.id
   }, [])
 
-  const updateRoutine = useCallback(async (id, { name, description, category }) => {
+  const updateRoutine = useCallback(async (id, { name, description, category, category_color }) => {
     const { error } = await supabase
       .from('routines')
       .update({
         name,
         description: description || null,
         category: category || null,
+        category_color: category ? category_color || null : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -115,6 +117,26 @@ export function useRoutines() {
         reps: it.reps ?? 10,
         rest_seconds: it.rest_seconds ?? 90,
       })),
+    })
+    if (error) throw error
+  }, [])
+
+  // Copia una rutina (típicamente predeterminada) a una rutina propia nueva,
+  // metadata + routine_exercises, sin vínculo al origen. Devuelve el id nuevo.
+  const copyRoutine = useCallback(async (sourceRoutineId) => {
+    const { data, error } = await supabase.rpc('copy_routine_to_user', {
+      p_source_routine_id: sourceRoutineId,
+    })
+    if (error) throw error
+    return data
+  }, [])
+
+  // Agrega un ejercicio suelto a una rutina propia con valores default
+  // (3 series, 10 reps, 90s descanso), sin pasar por el editor completo.
+  const addExerciseToRoutine = useCallback(async (routineId, exerciseId) => {
+    const { error } = await supabase.rpc('add_exercise_to_routine', {
+      p_routine_id: routineId,
+      p_exercise_id: exerciseId,
     })
     if (error) throw error
   }, [])
@@ -162,6 +184,8 @@ export function useRoutines() {
     updateRoutine,
     deleteRoutine,
     replaceRoutineExercises,
+    copyRoutine,
+    addExerciseToRoutine,
     generateForGoal,
   }
 }

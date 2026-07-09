@@ -5,13 +5,12 @@ import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react
 import { useRoutines } from '../../hooks/useRoutines'
 import ExercisePicker from '../../components/features/ExercisePicker'
 import PageHeader from '../../components/ui/PageHeader'
-
-const CATEGORIES = ['PPL', 'Full Body', 'Upper Lower', 'Otro']
+import { TAG_COLORS } from '../../utils/tagColors'
 
 const metaSchema = z.object({
   name: z.string().trim().min(1, 'El nombre es requerido').max(80, 'Máximo 80 caracteres'),
   description: z.string().trim().max(280, 'Máximo 280 caracteres').optional().or(z.literal('')),
-  category: z.string().optional().or(z.literal('')),
+  category: z.string().trim().max(24, 'Máximo 24 caracteres').optional().or(z.literal('')),
 })
 
 const itemSchema = z.object({
@@ -76,6 +75,7 @@ export default function RoutineEditor() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
+  const [categoryColor, setCategoryColor] = useState('')
   const [items, setItems] = useState([])
 
   const [loading, setLoading] = useState(isEdit)
@@ -98,6 +98,7 @@ export default function RoutineEditor() {
         setName(data.name ?? '')
         setDescription(data.description ?? '')
         setCategory(data.category ?? '')
+        setCategoryColor(data.category_color ?? '')
         setItems(
           data.routine_exercises.map((re) => ({
             exercise_id: re.exercise_id,
@@ -182,7 +183,13 @@ export default function RoutineEditor() {
 
     try {
       setSaving(true)
-      const payload = { name: name.trim(), description, category }
+      const trimmedCategory = category.trim()
+      const payload = {
+        name: name.trim(),
+        description,
+        category: trimmedCategory,
+        category_color: trimmedCategory ? categoryColor || 'lime' : '',
+      }
       const existingId = isEdit ? id : createdRoutineId
       let routineId = existingId
       if (existingId) {
@@ -223,13 +230,31 @@ export default function RoutineEditor() {
                 {errors.description && <p className="text-xs text-red-400 mt-1">{errors.description}</p>}
               </div>
               <div>
-                <label className="field-label">Categoría</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input">
-                  <option value="">Sin categoría</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <label className="field-label">Tag (opcional)</label>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="Ej. Empuje, Día 1, Fuerza…"
+                  maxLength={24}
+                  className="input"
+                />
+                {errors.category && <p className="text-xs text-red-400 mt-1">{errors.category}</p>}
+                {category.trim() && (
+                  <div className="flex gap-2 mt-2.5 flex-wrap">
+                    {TAG_COLORS.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setCategoryColor(c.key)}
+                        aria-label={c.label}
+                        className={`w-7 h-7 rounded-full ${c.dot} transition-shadow ${
+                          (categoryColor || 'lime') === c.key ? 'ring-2 ring-offset-2 ring-offset-ink-900 ring-zinc-100' : ''
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

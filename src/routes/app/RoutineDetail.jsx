@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { Play, Pencil } from 'lucide-react'
+import { Play, Pencil, Copy } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
@@ -12,7 +12,7 @@ import CategoryBadge from '../../components/ui/CategoryBadge'
 export default function RoutineDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getRoutineDetail } = useRoutines()
+  const { getRoutineDetail, copyRoutine } = useRoutines()
   const { startSessionFromRoutine, cancelSession } = useWorkout()
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const { confirm, modal } = useConfirm()
@@ -20,6 +20,7 @@ export default function RoutineDetail() {
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [copying, setCopying] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -66,6 +67,17 @@ export default function RoutineDetail() {
     }
   }
 
+  const handleCopy = async () => {
+    try {
+      setCopying(true)
+      const newId = await copyRoutine(id)
+      navigate(`/app/routines/${newId}`)
+    } catch (err) {
+      setError(err.message)
+      setCopying(false)
+    }
+  }
+
   const totalSets = routine?.routine_exercises.reduce((a, re) => a + (re.sets ?? 0), 0) ?? 0
 
   return (
@@ -99,7 +111,7 @@ export default function RoutineDetail() {
         ) : routine ? (
           <>
             <div>
-              <CategoryBadge category={routine.category} />
+              <CategoryBadge category={routine.category} color={routine.category_color} />
               <h2 className="font-display font-bold uppercase tracking-tight text-3xl text-zinc-100 leading-none mt-2">
                 {routine.name}
               </h2>
@@ -145,10 +157,17 @@ export default function RoutineDetail() {
       {!loading && routine && (
         <div className="fixed bottom-[var(--nav-h)] inset-x-0 z-30 bg-ink-950/90 backdrop-blur-md border-t border-ink-800 px-5 py-4">
           <div className="max-w-2xl mx-auto">
-            <button onClick={handleStart} disabled={starting} className="btn-accent w-full py-3.5 text-sm">
-              <Play size={18} fill="currentColor" />
-              {starting ? 'Iniciando…' : 'Iniciar entrenamiento'}
-            </button>
+            {isOwner ? (
+              <button onClick={handleStart} disabled={starting} className="btn-accent w-full py-3.5 text-sm">
+                <Play size={18} fill="currentColor" />
+                {starting ? 'Iniciando…' : 'Iniciar entrenamiento'}
+              </button>
+            ) : (
+              <button onClick={handleCopy} disabled={copying} className="btn-accent w-full py-3.5 text-sm">
+                <Copy size={18} />
+                {copying ? 'Agregando…' : 'Agregar a mis rutinas'}
+              </button>
+            )}
           </div>
         </div>
       )}

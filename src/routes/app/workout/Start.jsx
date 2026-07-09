@@ -11,7 +11,7 @@ export default function Start() {
   const navigate = useNavigate()
   const { startSession } = useWorkout()
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
-  const { getPublicRoutines, getUserRoutines, getGeneratedRoutines } = useRoutines()
+  const { getUserRoutines, getGeneratedRoutines } = useRoutines()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [routines, setRoutines] = useState([])
@@ -26,11 +26,11 @@ export default function Start() {
     let cancelled = false
     async function load() {
       try {
-        // Generadas primero: son las rutinas "a medida" del usuario y antes ni
-        // aparecían acá (getUserRoutines filtra is_generated=false).
-        const [gen, user, pub] = await Promise.all([getGeneratedRoutines(), getUserRoutines(), getPublicRoutines()])
+        // Solo rutinas propias (generadas primero): las predeterminadas son
+        // guía/catálogo, hay que copiarlas antes de poder entrenar con ellas.
+        const [gen, user] = await Promise.all([getGeneratedRoutines(), getUserRoutines()])
         if (cancelled) return
-        setRoutines([...gen, ...user, ...pub])
+        setRoutines([...gen, ...user])
       } catch (err) {
         if (!cancelled) setError(err.message)
       } finally {
@@ -39,7 +39,7 @@ export default function Start() {
     }
     load()
     return () => { cancelled = true }
-  }, [getGeneratedRoutines, getUserRoutines, getPublicRoutines])
+  }, [getGeneratedRoutines, getUserRoutines])
 
   const handleStartFree = async () => {
     try {
@@ -106,7 +106,7 @@ export default function Start() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="display text-sm text-zinc-100 truncate">{r.name}</p>
-                      <CategoryBadge category={r.category} />
+                      <CategoryBadge category={r.category} color={r.category_color} />
                     </div>
                     <p className="eyebrow">{r.exerciseCount} ejercicios</p>
                   </div>
