@@ -346,7 +346,9 @@ export default function Active() {
 
   const [showPicker, setShowPicker] = useState(false)
   const [lastPerfs, setLastPerfs] = useState({})
-  const [notes, setNotes] = useState('')
+  // Las notas viven en el store persistido (sobreviven un refresh, como el
+  // resto del entreno); antes eran estado local y se perdían.
+  const notes = session?.notes ?? ''
   const [finishing, setFinishing] = useState(false)
   const [error, setError] = useState(null)
   const elapsed = useElapsed(session?.startedAt)
@@ -548,8 +550,12 @@ export default function Active() {
 
   const onComplete = useCallback((exId, idx) => {
     completeSet(exId, idx).catch((err) => setError(err.message))
-    const set = useWorkoutStore.getState().exercises.find((e) => e.exerciseId === exId)?.sets[idx]
-    if (set?.completed) restTimer.start()
+    const ex = useWorkoutStore.getState().exercises.find((e) => e.exerciseId === exId)
+    const set = ex?.sets[idx]
+    // Descanso de la rutina para este ejercicio; sin rutina, el default global.
+    // Con descanso 0 (configurado explícitamente) no se abre el modal.
+    const rest = ex?.restSeconds
+    if (set?.completed && rest !== 0) restTimer.start(rest ?? undefined)
   }, [completeSet, restTimer])
 
   const onDeleteSet = useCallback((exId, idx) => {
@@ -695,7 +701,7 @@ export default function Active() {
           <label className="field-label">Notas del entrenamiento</label>
           <textarea
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => useWorkoutStore.getState().setNotes(e.target.value)}
             placeholder="¿Cómo te sentiste? ¿Algo a mejorar?"
             rows={3}
             className="input resize-none"

@@ -31,7 +31,7 @@ export function useWorkout() {
       .select(`
         id,
         routine_exercises (
-          sets, reps, "order",
+          sets, reps, rest_seconds, "order",
           exercise_id,
           exercises ( name, image_url, equipment )
         )
@@ -83,6 +83,7 @@ export function useWorkout() {
           name: re.exercises?.name ?? 'Ejercicio',
           image_url: re.exercises?.image_url ?? null,
           equipment: re.exercises?.equipment ?? null,
+          rest_seconds: re.rest_seconds ?? null,
         })
         const exSets = inserted
           .filter((s) => s.exercise_id === re.exercise_id)

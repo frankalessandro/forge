@@ -37,6 +37,11 @@ export const useWorkoutStore = create(persist((set) => ({
   startSession: (session) =>
     set({ session, exercises: [], isActive: true }),
 
+  // Readopta una sesión abierta encontrada en la DB (p. ej. localStorage
+  // limpiado o cambio de dispositivo): reconstruye el estado desde los sets.
+  restoreSession: (session, exercises) =>
+    set({ session, exercises, isActive: true }),
+
   addExercise: (exercise) =>
     set((s) => ({
       exercises: [
@@ -46,6 +51,8 @@ export const useWorkoutStore = create(persist((set) => ({
           name: exercise.name,
           imageUrl: exercise.image_url ?? null,
           equipment: exercise.equipment ?? null,
+          // Descanso configurado en la rutina (null en sesión libre → usa el default global)
+          restSeconds: exercise.rest_seconds ?? null,
           sets: [],
         },
       ],

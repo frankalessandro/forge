@@ -102,27 +102,21 @@ export function useRoutines() {
     if (error) throw error
   }, [])
 
-  // Reemplaza por completo los ejercicios de una rutina (borrar + insertar).
+  // Reemplaza por completo los ejercicios de una rutina.
   // items: [{ exercise_id, sets, reps, rest_seconds }] — el orden viene del índice.
+  // Va por RPC: borrar + insertar comparten transacción en Postgres, así un
+  // fallo a mitad de camino no deja la rutina vacía.
   const replaceRoutineExercises = useCallback(async (routineId, items) => {
-    const { error: delError } = await supabase
-      .from('routine_exercises')
-      .delete()
-      .eq('routine_id', routineId)
-    if (delError) throw delError
-
-    if (items.length === 0) return
-
-    const rows = items.map((it, idx) => ({
-      routine_id: routineId,
-      exercise_id: it.exercise_id,
-      sets: it.sets ?? 3,
-      reps: it.reps ?? 10,
-      rest_seconds: it.rest_seconds ?? 90,
-      order: idx + 1,
-    }))
-    const { error: insError } = await supabase.from('routine_exercises').insert(rows)
-    if (insError) throw insError
+    const { error } = await supabase.rpc('replace_routine_exercises', {
+      p_routine_id: routineId,
+      p_items: items.map((it) => ({
+        exercise_id: it.exercise_id,
+        sets: it.sets ?? 3,
+        reps: it.reps ?? 10,
+        rest_seconds: it.rest_seconds ?? 90,
+      })),
+    })
+    if (error) throw error
   }, [])
 
   // Genera un split de rutinas según el objetivo, nivel y días/semana del usuario.

@@ -11,7 +11,7 @@ export default function Start() {
   const navigate = useNavigate()
   const { startSession } = useWorkout()
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
-  const { getPublicRoutines, getUserRoutines } = useRoutines()
+  const { getPublicRoutines, getUserRoutines, getGeneratedRoutines } = useRoutines()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [routines, setRoutines] = useState([])
@@ -26,9 +26,11 @@ export default function Start() {
     let cancelled = false
     async function load() {
       try {
-        const [user, pub] = await Promise.all([getUserRoutines(), getPublicRoutines()])
+        // Generadas primero: son las rutinas "a medida" del usuario y antes ni
+        // aparecían acá (getUserRoutines filtra is_generated=false).
+        const [gen, user, pub] = await Promise.all([getGeneratedRoutines(), getUserRoutines(), getPublicRoutines()])
         if (cancelled) return
-        setRoutines([...user, ...pub])
+        setRoutines([...gen, ...user, ...pub])
       } catch (err) {
         if (!cancelled) setError(err.message)
       } finally {
@@ -37,7 +39,7 @@ export default function Start() {
     }
     load()
     return () => { cancelled = true }
-  }, [getUserRoutines, getPublicRoutines])
+  }, [getGeneratedRoutines, getUserRoutines, getPublicRoutines])
 
   const handleStartFree = async () => {
     try {

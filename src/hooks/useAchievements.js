@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
 import { displayWeight } from '../utils/weight'
+import { buildWeeks, computeStreak, computeMaxStreak, getMonday } from '../utils/streak'
 
 // Ejercicios con logros de categoría específica. Se referencian por `slug`
 // (estable, ver 20260701000001_exercises_achievement_slug.sql) en vez de por
@@ -13,24 +14,12 @@ const EXERCISE_CATEGORY_MAP = {
   deadlift: 'deadlift',
 }
 
-function toDateStr(date) {
-  return new Date(date).toISOString().slice(0, 10)
-}
-
-function longestStreak(dateStrings) {
-  const days = [...new Set(dateStrings)].sort()
-  let best = 0, run = 0, prev = null
-  for (const d of days) {
-    if (prev !== null) {
-      const diff = (new Date(d) - new Date(prev)) / 86400000
-      run = diff === 1 ? run + 1 : 1
-    } else {
-      run = 1
-    }
-    if (run > best) best = run
-    prev = d
-  }
-  return best
+// Semanas transcurridas desde la primera sesión hasta hoy (mínimo 1), para
+// construir el rango completo de semanas al calcular la mejor racha histórica.
+function weeksSince(firstDate) {
+  const first = getMonday(new Date(firstDate)).getTime()
+  const current = getMonday(new Date()).getTime()
+  return Math.max(1, Math.round((current - first) / (7 * 86400000)) + 1)
 }
 
 export function valueForCategory(category, stats) {
@@ -70,11 +59,18 @@ export function useAchievements() {
   const getStats = useCallback(async () => {
     const userId = getCurrentUserId()
 
-    const { data: sessions } = await supabase
-      .from('workout_sessions')
-      .select('id, started_at')
-      .eq('user_id', userId)
-      .not('finished_at', 'is', null)
+    const [{ data: sessions }, { data: profile }] = await Promise.all([
+      supabase
+        .from('workout_sessions')
+        .select('id, started_at')
+        .eq('user_id', userId)
+        .not('finished_at', 'is', null),
+      supabase
+        .from('profiles')
+        .select('training_days_per_week')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ])
 
     const list = sessions ?? []
     const stats = {
@@ -88,7 +84,14 @@ export function useAchievements() {
     }
 
     if (list.length > 0) {
-      stats.maxStreak = longestStreak(list.map((s) => toDateStr(s.started_at)))
+      // Racha unificada con el resto de la app: semanas consecutivas cumpliendo
+      // la meta de días/semana del usuario (no días de calendario seguidos).
+      const goal = profile?.training_days_per_week || 1
+      const dates = list.map((s) => s.started_at)
+      const oldest = dates.reduce((a, b) => (new Date(a) <= new Date(b) ? a : b))
+      const weeks = buildWeeks(dates, goal, weeksSince(oldest))
+      stats.maxStreak = computeMaxStreak(weeks)
+      stats.currentStreak = computeStreak(weeks)
 
       // Obtener IDs de los ejercicios con categoría específica
       const { data: slugExercises } = await supabase
@@ -118,18 +121,6 @@ export function useAchievements() {
         if (cat && w > stats.exerciseMaxWeights[cat]) stats.exerciseMaxWeights[cat] = w
       }
 
-      // Racha actual (hasta hoy o ayer)
-      const dates = new Set(list.map((s) => toDateStr(s.started_at)))
-      const today = toDateStr(new Date())
-      const yesterday = toDateStr(new Date(Date.now() - 86400000))
-      let cursor = dates.has(today) ? today : dates.has(yesterday) ? yesterday : null
-      if (cursor) {
-        const c = new Date(cursor)
-        while (dates.has(toDateStr(c))) {
-          stats.currentStreak++
-          c.setDate(c.getDate() - 1)
-        }
-      }
     }
 
     const { count } = await supabase

@@ -33,10 +33,12 @@ export const useAuthStore = create((set) => ({
       if (!session) return false
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name')
+        .select('onboarding_completed')
         .eq('user_id', session.user.id)
         .maybeSingle()
-      return !profile?.name
+      // Flag explícito: "saltar por ahora" también lo marca, así la encuesta
+      // no reaparece en cada login para quien decidió no completarla.
+      return !profile?.onboarding_completed
     }
 
     supabase.auth

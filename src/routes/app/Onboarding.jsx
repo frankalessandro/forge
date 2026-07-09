@@ -78,8 +78,15 @@ export default function Onboarding() {
     }
     // Guarda la foto de Google en el perfil
     if (meta.avatar_url) payload.avatar_url = meta.avatar_url
+    // También al saltar: que la encuesta no reaparezca en cada login.
+    payload.onboarding_completed = true
 
-    await updateProfile(payload)
+    const { error } = await updateProfile(payload)
+    if (error) {
+      sileo.error({ title: 'No se pudo guardar tu perfil', description: error.message })
+      setSaving(false)
+      return
+    }
 
     if (data.goals.length) {
       try {

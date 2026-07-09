@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useWorkout } from '../../hooks/useWorkout'
 import { useWorkoutStore } from '../../stores/workoutStore'
+import { useConfirm } from '../../hooks/useConfirm'
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 
@@ -12,8 +13,9 @@ export default function RoutineDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getRoutineDetail } = useRoutines()
-  const { startSessionFromRoutine } = useWorkout()
+  const { startSessionFromRoutine, cancelSession } = useWorkout()
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
+  const { confirm, modal } = useConfirm()
   const [routine, setRoutine] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -40,13 +42,22 @@ export default function RoutineDetail() {
   }, [id, getRoutineDetail])
 
   const handleStart = async () => {
-    // Ya hay un entreno en curso (persistido): lo retomamos en vez de crear otro.
+    // Ya hay un entreno en curso: preguntar antes de pisarlo en silencio.
+    // Confirmar = descartar el entreno viejo y arrancar esta rutina;
+    // cancelar = no hacer nada (el banner del dashboard permite retomarlo).
     if (isWorkoutActive) {
-      navigate('/app/workout/active')
-      return
+      const ok = await confirm({
+        title: 'Tienes un entreno en curso',
+        description: 'Para empezar esta rutina se descartará el entrenamiento activo y sus datos no guardados.',
+        confirmLabel: 'Descartar y empezar',
+        cancelLabel: 'Volver',
+        danger: true,
+      })
+      if (!ok) return
     }
     try {
       setStarting(true)
+      if (isWorkoutActive) await cancelSession()
       await startSessionFromRoutine(id)
       navigate('/app/workout/active')
     } catch (err) {
@@ -59,6 +70,7 @@ export default function RoutineDetail() {
 
   return (
     <div className="min-h-screen bg-ink-950">
+      {modal}
       <PageHeader
         title="Rutina"
         back="/app/routines"

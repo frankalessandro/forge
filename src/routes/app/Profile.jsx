@@ -99,7 +99,11 @@ export default function Profile() {
     if (error) { setStatError(error.message); return }
     setStatWeight('')
     setStatDate(todayISO())
+    // El peso actual del perfil se sincronizó en addBodyStat: recargar ambos
+    // para que IMC/TMB/peso saludable reflejen el registro nuevo al instante.
     await loadBodyStats()
+    const { data: fresh } = await getProfile()
+    if (fresh) setProfile(fresh)
   }
 
   async function handleLogout() {

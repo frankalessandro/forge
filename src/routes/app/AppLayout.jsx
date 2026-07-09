@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Home, ClipboardList, TrendingUp, User, Plus, Play, Dumbbell, Scale, X } from 'lucide-react'
 import { useWorkout } from '../../hooks/useWorkout'
 import { useWorkoutStore } from '../../stores/workoutStore'
+import { useSessionRecovery } from '../../hooks/useSessionRecovery'
 import Sheet from '../../components/ui/Sheet'
 import { Toaster } from 'sileo'
 
@@ -41,6 +42,9 @@ export default function AppLayout() {
   const isWorkoutActive = useWorkoutStore((s) => s.isActive)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [starting, setStarting] = useState(false)
+
+  // Readopta sesiones abiertas en la DB y limpia las zombis (una vez por carga).
+  useSessionRecovery()
 
   // El entrenamiento activo es pantalla completa: ocultamos el nav.
   const hideNav = location.pathname.startsWith('/app/workout/active')

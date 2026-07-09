@@ -58,6 +58,25 @@ export function buildWeeks(sessionDates, goal, weeksBack = 12) {
   return weeks // índice 0 = semana actual
 }
 
+// Mejor racha histórica de semanas cumplidas (para logros). Igual que en
+// computeStreak, la semana en curso no corta una racha si aún no llegó al
+// objetivo — simplemente no suma todavía.
+export function computeMaxStreak(weeks) {
+  let best = 0
+  let run = 0
+  // weeks viene con índice 0 = semana actual; recorremos de la más vieja a hoy.
+  for (let i = weeks.length - 1; i >= 0; i--) {
+    const w = weeks[i]
+    if (w.met) {
+      run++
+      if (run > best) best = run
+    } else if (!w.isCurrent) {
+      run = 0
+    }
+  }
+  return best
+}
+
 // Cuenta semanas consecutivas cumplidas. La semana en curso suma si ya cumplió
 // el objetivo; si todavía no, no rompe la racha (sigue contando las anteriores).
 export function computeStreak(weeks) {
