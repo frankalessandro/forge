@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { useWorkoutStore } from './workoutStore'
+import { useTutorialStore } from './tutorialStore'
 
 // Solo comprobamos si hay un token persistido para el render optimista inicial
 // (evita el flash de login si el usuario ya estaba logueado). El token en sí
@@ -46,6 +47,7 @@ export const useAuthStore = create((set) => ({
       .then(async ({ data: { session } }) => {
         const needsOnboarding = await resolveNeedsOnboarding(session)
         useWorkoutStore.getState().syncOwner(session?.user?.id ?? null)
+        if (session?.user?.id) useTutorialStore.getState().syncFromServer(session.user.id)
         set({ isAuthenticated: Boolean(session), user: session?.user ?? null, ready: true, needsOnboarding })
       })
       .catch(() => {
@@ -79,6 +81,7 @@ export const useAuthStore = create((set) => ({
         // Si había un entreno guardado de otra cuenta en este dispositivo, se
         // descarta acá antes de que needsOnboarding/RootRedirect lleven a la UI.
         useWorkoutStore.getState().syncOwner(session.user.id)
+        useTutorialStore.getState().syncFromServer(session.user.id)
         // Resolvemos needsOnboarding antes de publicar la sesión nueva para que
         // RootRedirect no alcance a mandar al dashboard antes de saber si hace falta onboarding.
         const needsOnboarding = await resolveNeedsOnboarding(session)
