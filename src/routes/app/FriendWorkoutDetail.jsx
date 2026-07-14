@@ -7,6 +7,7 @@ import Stat from '../../components/ui/Stat'
 import { calcVolume } from '../../utils/weight'
 import { formatDuration } from '../../utils/duration'
 import { bestSet, SET_TYPE_LABEL, SET_TYPE_COLOR } from '../../utils/workoutSets'
+import { logError } from '../../utils/logError'
 
 export default function FriendWorkoutDetail() {
   const { userId, sessionId } = useParams()
@@ -44,7 +45,7 @@ export default function FriendWorkoutDetail() {
         }
         setGroupedSets([...map.values()])
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('FriendWorkoutDetail.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }

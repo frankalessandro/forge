@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { sileo } from 'sileo'
 import { X, Plus, Check, Dumbbell } from 'lucide-react'
 import { useRoutines } from '../../hooks/useRoutines'
+import { logError } from '../../utils/logError'
 
 export default function AddToRoutineSheet({ exerciseId, onClose }) {
   const { getUserRoutines, createRoutine, addExerciseToRoutine } = useRoutines()
@@ -20,7 +21,7 @@ export default function AddToRoutineSheet({ exerciseId, onClose }) {
         const data = await getUserRoutines()
         if (!cancelled) setRoutines(data)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('AddToRoutineSheet.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -38,6 +39,7 @@ export default function AddToRoutineSheet({ exerciseId, onClose }) {
       sileo.success({ title: `Agregado a "${routineName}"` })
       setTimeout(onClose, 500)
     } catch (err) {
+      logError('AddToRoutineSheet.handleAdd', err)
       setError(err.message)
       sileo.error({ title: 'Error al agregar', description: err.message })
       setAddingId(null)
@@ -56,6 +58,7 @@ export default function AddToRoutineSheet({ exerciseId, onClose }) {
       sileo.success({ title: `Agregado a "${name}"` })
       setTimeout(onClose, 500)
     } catch (err) {
+      logError('AddToRoutineSheet.handleCreateAndAdd', err)
       setError(err.message)
       sileo.error({ title: 'Error al agregar', description: err.message })
       setAddingId(null)

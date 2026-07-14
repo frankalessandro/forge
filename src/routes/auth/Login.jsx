@@ -6,6 +6,7 @@ import { Dumbbell } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useAuthStore } from '../../stores/authStore'
 import { useOAuthLogin } from '../../hooks/useOAuthLogin'
+import { logError } from '../../utils/logError'
 
 const loginSchema = z.object({
   email: z.string().email('Ingresa un email válido'),
@@ -27,6 +28,7 @@ export default function Login() {
   const onSubmit = async ({ email, password }) => {
     const { error } = await signIn(email, password)
     if (error) {
+      logError('Login.onSubmit', error)
       sileo.error({ title: 'Credenciales incorrectas', description: 'Revisá tu email y contraseña.' })
       setError('root', { message: 'Email o contraseña incorrectos' })
       return

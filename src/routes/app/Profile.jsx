@@ -22,6 +22,7 @@ import {
   calcHRZones,
   healthyWeightRange,
 } from '../../utils/healthMetrics'
+import { logError } from '../../utils/logError'
 
 function formatDate(isoStr) {
   const d = new Date(isoStr)
@@ -56,7 +57,8 @@ export default function Profile() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data } = await getProfile()
+      const { data, error } = await getProfile()
+      if (error) logError('Profile.load', error)
       if (!cancelled && data) setProfile(data)
       if (!cancelled) setLoading(false)
     }
@@ -76,7 +78,7 @@ export default function Profile() {
 
   async function loadRank() {
     // Desbloquea retroactivamente lo que corresponda y calcula la XP del rango.
-    await checkAndUnlock().catch(() => {})
+    await checkAndUnlock().catch((err) => logError('Profile.checkAndUnlock', err))
     const [catalog, unlocked] = await Promise.all([getCatalog(), getUnlocked()])
     const have = new Set(unlocked.map((u) => u.achievement_id))
     setXp(catalog.filter((a) => have.has(a.id)).reduce((sum, a) => sum + (a.xp ?? 0), 0))
@@ -86,7 +88,8 @@ export default function Profile() {
     try {
       const friends = await listFriends()
       setFriendCount(friends.length)
-    } catch {
+    } catch (err) {
+      logError('Profile.loadFriendCount', err)
       setFriendCount(null)
     }
   }
@@ -97,7 +100,7 @@ export default function Profile() {
     const w = parseFloat(statWeight)
     if (!w || w <= 0) { setStatError('Ingresa un peso válido.'); return }
     const { error } = await addBodyStat(w, statDate ? new Date(statDate).toISOString() : undefined)
-    if (error) { setStatError(error.message); return }
+    if (error) { logError('Profile.handleAddStat', error); setStatError(error.message); return }
     setStatWeight('')
     setStatDate(todayISO())
     // El peso actual del perfil se sincronizó en addBodyStat: recargar ambos
@@ -120,8 +123,9 @@ export default function Profile() {
     // al navigate y la app quedaba colgada en la pantalla de perfil.
     try {
       await signOut({ scope: 'local' })
-    } catch {
+    } catch (err) {
       // seguimos igual: lo importante es sacar al usuario de la sesión local
+      logError('Profile.handleLogout', err)
     }
     navigate('/login', { replace: true })
   }

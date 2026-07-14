@@ -6,6 +6,7 @@ import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
 import { GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
+import { logError } from '../../utils/logError'
 
 // Una fila de comparación amigo vs. yo. Resalta a quien va por delante.
 function CompareRow({ icon: Icon, label, mine, theirs, unit, format = (v) => v }) {
@@ -54,7 +55,7 @@ export default function PublicProfile() {
         setFriend(theirs)
         setMe(mine)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('PublicProfile.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }

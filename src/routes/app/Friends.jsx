@@ -4,6 +4,7 @@ import { Search, UserPlus, Check, X, ChevronRight, Clock, Users } from 'lucide-r
 import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
 import TutorialGuide from '../../components/features/TutorialGuide'
+import { logError } from '../../utils/logError'
 
 function Avatar({ name, size = 'md' }) {
   const dim = size === 'sm' ? 'w-9 h-9 text-sm' : 'w-11 h-11 text-base'
@@ -33,6 +34,7 @@ export default function Friends() {
       setFriends(f)
       setRequests(r)
     } catch (err) {
+      logError('Friends.refresh', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -56,6 +58,7 @@ export default function Friends() {
       try {
         setResults(await searchUsers(q))
       } catch (err) {
+        logError('Friends.search', err)
         setError(err.message)
       } finally {
         setSearching(false)
@@ -70,6 +73,7 @@ export default function Friends() {
       await refresh()
       setResults((prev) => prev.map((r) => (r.user_id === userId ? { ...r, status: 'pending', is_incoming: false } : r)))
     } catch (err) {
+      logError('Friends.sendRequest', err)
       setError(err.message)
     }
   }
@@ -79,6 +83,7 @@ export default function Friends() {
       await acceptRequest(friendshipId)
       await refresh()
     } catch (err) {
+      logError('Friends.acceptRequest', err)
       setError(err.message)
     }
   }
@@ -88,6 +93,7 @@ export default function Friends() {
       await removeFriendship(friendshipId)
       await refresh()
     } catch (err) {
+      logError('Friends.removeFriendship', err)
       setError(err.message)
     }
   }

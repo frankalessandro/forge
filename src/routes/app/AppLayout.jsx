@@ -6,6 +6,7 @@ import { useWorkoutStore } from '../../stores/workoutStore'
 import { useSessionRecovery } from '../../hooks/useSessionRecovery'
 import Sheet from '../../components/ui/Sheet'
 import { Toaster } from 'sileo'
+import { logError } from '../../utils/logError'
 
 const TABS = [
   { to: '/app/dashboard', label: 'Inicio', icon: Home },
@@ -61,7 +62,8 @@ export default function AppLayout() {
       await startSession()
       setSheetOpen(false)
       navigate('/app/workout/active')
-    } catch {
+    } catch (err) {
+      logError('AppLayout.handleStartFree', err)
       setStarting(false)
     }
   }

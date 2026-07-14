@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logError'
 
 // ── Caché de catálogo (estático durante la sesión) ───────────────────────────
 // El catálogo de ejercicios y los grupos musculares son datos de seed que no
@@ -47,6 +48,7 @@ export function useExercises({ bodyPart, equipment, search } = {}) {
         }
       })
       .catch((e) => {
+        logError('useExercises.loadCatalog', e)
         if (!cancelled) {
           setError(e.message)
           setLoading(false)
@@ -93,7 +95,7 @@ export function useExercise(id) {
       .single()
       .then(({ data, error: err }) => {
         if (!cancelled) {
-          if (err) setError(err.message)
+          if (err) { logError('useExercise.load', err); setError(err.message) }
           else setExercise(data)
           setLoading(false)
         }

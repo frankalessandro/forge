@@ -10,6 +10,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 import FocusBadge from '../../components/ui/FocusBadge'
 import TutorialGuide from '../../components/features/TutorialGuide'
+import { logError } from '../../utils/logError'
 
 function RoutineCard({ routine, onOpen }) {
   return (
@@ -106,6 +107,7 @@ export default function Routines() {
         setGeneratedRoutines(gen)
         setProfile(prof)
       } catch (err) {
+        logError('Routines.load', err)
         setError(err.message)
       } finally {
         setLoading(false)
@@ -139,10 +141,10 @@ export default function Routines() {
         title: `${created.length} rutinas listas`,
         description: 'Reemplazaron las anteriores generadas.',
       }),
-      error: (err) => ({
-        title: 'Error al generar',
-        description: err.message,
-      }),
+      error: (err) => {
+        logError('Routines.handleGenerate', err)
+        return { title: 'Error al generar', description: err.message }
+      },
     })
   }
 
@@ -160,6 +162,7 @@ export default function Routines() {
       setGeneratedRoutines((prev) => prev.filter((r) => r.id !== routine.id))
       sileo.success({ title: 'Rutina eliminada.' })
     } catch (err) {
+      logError('Routines.handleDelete', err)
       sileo.error({ title: 'Error al eliminar', description: err.message })
     }
   }

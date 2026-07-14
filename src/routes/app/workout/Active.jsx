@@ -10,6 +10,7 @@ import { useConfirm } from '../../../hooks/useConfirm'
 import ExercisePicker from '../../../components/features/ExercisePicker'
 import TutorialGuide from '../../../components/features/TutorialGuide'
 import { isDumbbell, displayWeight } from '../../../utils/weight'
+import { logError } from '../../../utils/logError'
 
 const PERSIST_DELAY = 600
 
@@ -494,7 +495,7 @@ export default function Active() {
     clearTimeout(persistTimers.current[exId])
     persistTimers.current[exId] = setTimeout(() => {
       delete persistTimers.current[exId]
-      syncExerciseSets(exId).catch(() => {})
+      syncExerciseSets(exId).catch((err) => logError('Active.persistExercise', err))
     }, PERSIST_DELAY)
   }, [syncExerciseSets])
 
@@ -503,7 +504,7 @@ export default function Active() {
     Object.values(timers).forEach(clearTimeout)
     persistTimers.current = {}
     const exs = useWorkoutStore.getState().exercises
-    await Promise.all(exs.map((ex) => syncExerciseSets(ex.exerciseId).catch(() => {})))
+    await Promise.all(exs.map((ex) => syncExerciseSets(ex.exerciseId).catch((err) => logError('Active.flushAll', err))))
   }, [syncExerciseSets])
 
   // Limpieza de timers al desmontar
@@ -533,7 +534,7 @@ export default function Active() {
     pending.forEach((id) => requestedPerf.current.add(id))
     getLastPerformances(pending)
       .then((byExercise) => setLastPerfs((p) => ({ ...p, ...byExercise })))
-      .catch(() => {})
+      .catch((err) => logError('Active.getLastPerformances', err))
   }, [exercises, getLastPerformances])
 
   // ── Handlers estables (no disparan red por tecla: store ahora, DB diferido) ─
@@ -553,7 +554,7 @@ export default function Active() {
   }, [persistExercise])
 
   const onComplete = useCallback((exId, idx) => {
-    completeSet(exId, idx).catch((err) => setError(err.message))
+    completeSet(exId, idx).catch((err) => { logError('Active.completeSet', err); setError(err.message) })
     const ex = useWorkoutStore.getState().exercises.find((e) => e.exerciseId === exId)
     const set = ex?.sets[idx]
     // Descanso de la rutina para este ejercicio; sin rutina, el default global.
@@ -563,16 +564,16 @@ export default function Active() {
   }, [completeSet, restTimer])
 
   const onDeleteSet = useCallback((exId, idx) => {
-    deleteSet(exId, idx).catch((err) => setError(err.message))
+    deleteSet(exId, idx).catch((err) => { logError('Active.deleteSet', err); setError(err.message) })
   }, [deleteSet])
 
   const onDeleteExercise = useCallback((exId) => {
     clearTimeout(persistTimers.current[exId])
-    deleteExercise(exId).catch((err) => setError(err.message))
+    deleteExercise(exId).catch((err) => { logError('Active.deleteExercise', err); setError(err.message) })
   }, [deleteExercise])
 
   const onAddSet = useCallback((exId, data) => {
-    addSet(exId, data).catch((err) => setError(err.message))
+    addSet(exId, data).catch((err) => { logError('Active.addSet', err); setError(err.message) })
   }, [addSet])
 
   const handlePickExercise = useCallback((exercise) => {
@@ -594,10 +595,11 @@ export default function Active() {
             sileo.success({ title: `¡Logro desbloqueado! ${a.name}`, description: a.description })
           }
         })
-        .catch(() => {})
+        .catch((err) => logError('Active.checkAndUnlock', err))
 
       navigate(`/app/workout/summary/${sessionId}`, { replace: true })
     } catch (err) {
+      logError('Active.handleFinish', err)
       setError(err.message)
       setFinishing(false)
     }

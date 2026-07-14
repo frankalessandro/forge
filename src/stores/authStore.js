@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { useWorkoutStore } from './workoutStore'
 import { useTutorialStore } from './tutorialStore'
+import { logError } from '../utils/logError'
 
 // Solo comprobamos si hay un token persistido para el render optimista inicial
 // (evita el flash de login si el usuario ya estaba logueado). El token en sí
@@ -50,9 +51,10 @@ export const useAuthStore = create((set) => ({
         if (session?.user?.id) useTutorialStore.getState().syncFromServer(session.user.id)
         set({ isAuthenticated: Boolean(session), user: session?.user ?? null, ready: true, needsOnboarding })
       })
-      .catch(() => {
+      .catch((err) => {
         // Token corrupto/inválido en localStorage: tratamos como deslogueado
         // en vez de dejar `ready` colgado en false para siempre (spinner infinito).
+        logError('authStore.init.getSession', err)
         useWorkoutStore.getState().syncOwner(null)
         set({ isAuthenticated: false, user: null, ready: true, needsOnboarding: false })
       })
