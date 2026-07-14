@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
+import { compressImage } from '../utils/compressImage'
+import { logError } from '../utils/logError'
 
 export function useProfile() {
   const getProfile = useCallback(async () => {
@@ -26,11 +28,22 @@ export function useProfile() {
   const uploadAvatar = useCallback(async (file) => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: null, error: new Error('Not authenticated') }
-    const ext = file.name.split('.').pop()
-    const path = `${userId}/avatar.${ext}`
+
+    let blob
+    try {
+      blob = await compressImage(file)
+    } catch (err) {
+      logError('useProfile.uploadAvatar.compress', err)
+      return { data: null, error: err }
+    }
+
+    // Ruta fija (ya no depende de la extensión original): la salida siempre
+    // es jpeg recomprimido, así avatares viejos en otro formato no quedan
+    // huérfanos en el bucket cada vez que alguien cambia de foto.
+    const path = `${userId}/avatar.jpg`
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type })
+      .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
     if (uploadError) return { data: null, error: uploadError }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
     return updateProfile({ avatar_url: `${publicUrl}?t=${Date.now()}` })

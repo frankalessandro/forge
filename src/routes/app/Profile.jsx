@@ -56,6 +56,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
   const [xp, setXp] = useState(0)
+  const [rankLoading, setRankLoading] = useState(true)
   const [friendCount, setFriendCount] = useState(null)
   const [infoOpen, setInfoOpen] = useState(false)
   const [bodyStats, setBodyStats] = useState([])
@@ -92,6 +93,7 @@ export default function Profile() {
     const [catalog, unlocked] = await Promise.all([getCatalog(), getUnlocked()])
     const have = new Set(unlocked.map((u) => u.achievement_id))
     setXp(catalog.filter((a) => have.has(a.id)).reduce((sum, a) => sum + (a.xp ?? 0), 0))
+    setRankLoading(false)
   }
 
   async function loadFriendCount() {
@@ -282,9 +284,13 @@ export default function Profile() {
             )}
 
             {/* Rango — lleva a la vista de logros */}
-            <Link to="/app/profile/achievements" className="block" data-tutorial="profile-rank">
-              <RankCard xp={xp} interactive />
-            </Link>
+            {rankLoading ? (
+              <div className="h-[104px] card animate-pulse" />
+            ) : (
+              <Link to="/app/profile/achievements" className="block" data-tutorial="profile-rank">
+                <RankCard xp={xp} interactive />
+              </Link>
+            )}
 
             {/* Métricas */}
             {(bmiInfo || bmr || maxHR || weightRange) && (
