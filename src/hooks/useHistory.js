@@ -44,8 +44,9 @@ export function useHistory(page) {
       if (ids.length > 0) {
         const { data: allSets, error: setsErr } = await supabase
           .from('workout_sets')
-          .select('session_id, exercise_id, reps, weight_kg, set_type, exercises(equipment)')
+          .select('session_id, exercise_id, reps, weight_kg, set_type, exercises(equipment, name, name_es, image_url)')
           .in('session_id', ids)
+          .order('created_at')
 
         if (cancelled) return
         if (setsErr) {
@@ -60,9 +61,24 @@ export function useHistory(page) {
           if (!entry) { entry = []; bySession.set(set.session_id, entry) }
           entry.push(set)
         }
+        const MAX_THUMBS = 4
         for (const [sessionId, sets] of bySession) {
           const exerciseIds = new Set(sets.map((s) => s.exercise_id))
-          stats[sessionId] = { volume: calcVolume(sets), exerciseCount: exerciseIds.size }
+          // Primeros N ejercicios distintos, en el orden en que se registraron,
+          // para la vista previa de miniaturas de cada sesión en el historial.
+          const seen = new Set()
+          const thumbs = []
+          for (const s of sets) {
+            if (seen.has(s.exercise_id)) continue
+            seen.add(s.exercise_id)
+            thumbs.push({
+              id: s.exercise_id,
+              name: s.exercises?.name_es ?? s.exercises?.name ?? '',
+              imageUrl: s.exercises?.image_url ?? null,
+            })
+            if (thumbs.length >= MAX_THUMBS) break
+          }
+          stats[sessionId] = { volume: calcVolume(sets), exerciseCount: exerciseIds.size, thumbs }
         }
       }
 
