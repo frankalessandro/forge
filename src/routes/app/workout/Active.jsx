@@ -355,19 +355,6 @@ export default function Active() {
   const [error, setError] = useState(null)
   const elapsed = useElapsed(session?.startedAt)
 
-  // ── Bloqueo de zoom/scroll accidental mientras el entreno está activo ────
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]')
-    const original = meta?.getAttribute('content')
-    meta?.setAttribute(
-      'content',
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
-    )
-    return () => {
-      if (meta && original) meta.setAttribute('content', original)
-    }
-  }, [])
-
   // ── Auto-colapso de ejercicios al completar todas sus series ────────────
   const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const prevDoneRef = useRef({})
