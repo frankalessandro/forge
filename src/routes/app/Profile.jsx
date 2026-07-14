@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, Info, Users, Pencil } from 'lucide-react'
+import { LogOut, Info, Users, Pencil, Crown } from 'lucide-react'
 import { useConfirm } from '../../hooks/useConfirm'
 import { useAuthStore } from '../../stores/authStore'
 import { useProfile } from '../../hooks/useProfile'
@@ -185,9 +185,17 @@ export default function Profile() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
-                    {profile?.name || 'Sin nombre'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                      {profile?.name || 'Sin nombre'}
+                    </p>
+                    {profile?.is_premium && (
+                      <span className="chip bg-amber-400/15 text-amber-300 shrink-0">
+                        <Crown size={12} />
+                        Premium
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`chip ${rank.current.bg} ${rank.current.color}`}>{rank.current.name}</span>
                     {activityLabel && <span className="chip-muted">{activityLabel}</span>}
