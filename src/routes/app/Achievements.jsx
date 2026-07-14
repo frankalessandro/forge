@@ -5,6 +5,7 @@ import { iconFor, CATEGORY_LABELS } from '../../utils/achievementIcons'
 import PageHeader from '../../components/ui/PageHeader'
 import RankCard from '../../components/features/RankCard'
 import AchievementModal from '../../components/features/AchievementModal'
+import { logError } from '../../utils/logError'
 
 const CATEGORY_ORDER = ['streak', 'workouts', 'volume', 'strength', 'bench', 'squat', 'deadlift', 'prs']
 
@@ -55,12 +56,14 @@ export default function Achievements() {
     let cancelled = false
     async function load() {
       try {
-        await checkAndUnlock().catch(() => {})
+        await checkAndUnlock().catch((err) => logError('Achievements.checkAndUnlock', err))
         const [cat, unl, st] = await Promise.all([getCatalog(), getUnlocked(), getStats()])
         if (cancelled) return
         setCatalog(cat.map((a) => ({ ...a, Icon: iconFor(a.icon) })))
         setUnlocked(new Map(unl.map((u) => [u.achievement_id, u.unlocked_at])))
         setStats(st)
+      } catch (err) {
+        logError('Achievements.load', err)
       } finally {
         if (!cancelled) setLoading(false)
       }

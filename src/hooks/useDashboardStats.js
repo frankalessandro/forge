@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildWeeks, computeStreak, getMonday } from '../utils/streak'
 import { calcVolume } from '../utils/weight'
+import { logError } from '../utils/logError'
 
 // Estadísticas de la semana en curso (entrenos, volumen, racha) + nombre del
 // usuario, para el dashboard. Las lecturas independientes van en paralelo.
@@ -50,6 +51,7 @@ export function useDashboardStats() {
 
       const firstError = profileErr || weekErr || recentErr
       if (firstError) {
+        logError('useDashboardStats.load', firstError)
         setError(firstError.message)
         setLoading(false)
         return
@@ -67,6 +69,7 @@ export function useDashboardStats() {
 
         if (cancelled) return
         if (setsErr) {
+          logError('useDashboardStats.loadSets', setsErr)
           setError(setsErr.message)
           setLoading(false)
           return

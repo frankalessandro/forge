@@ -5,6 +5,7 @@ import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
 import Metric from '../../components/ui/Metric'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
+import { logError } from '../../utils/logError'
 
 export default function FriendWorkouts() {
   const { userId } = useParams()
@@ -28,7 +29,7 @@ export default function FriendWorkouts() {
         setSessions(workouts)
         setFriendName(profile?.name ?? '')
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('FriendWorkouts.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }

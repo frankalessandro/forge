@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogOut, Info, Users, Pencil } from 'lucide-react'
+import { LogOut, Info, Users, Pencil, Crown, Check, Palette } from 'lucide-react'
+import { sileo } from 'sileo'
 import { useConfirm } from '../../hooks/useConfirm'
 import { useAuthStore } from '../../stores/authStore'
 import { useProfile } from '../../hooks/useProfile'
@@ -9,6 +10,7 @@ import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
 import PageHeader from '../../components/ui/PageHeader'
 import Sheet from '../../components/ui/Sheet'
+import Accordion from '../../components/ui/Accordion'
 import RankCard from '../../components/features/RankCard'
 import TutorialGuide from '../../components/features/TutorialGuide'
 const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
@@ -22,6 +24,9 @@ import {
   calcHRZones,
   healthyWeightRange,
 } from '../../utils/healthMetrics'
+import { logError } from '../../utils/logError'
+import { ACCENT_COLORS, accentColorFor } from '../../utils/accentColors'
+import { applyAccentColor } from '../../utils/applyAccentColor'
 
 function formatDate(isoStr) {
   const d = new Date(isoStr)
@@ -35,9 +40,14 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// El verde tiene key null (es el default de index.css, no un color propio),
+// pero savingColor necesita un id no-null para distinguir "verde en progreso"
+// de "nada guardando".
+const GREEN_ID = '__green__'
+
 export default function Profile() {
   const navigate = useNavigate()
-  const { getProfile, addBodyStat, getBodyStats } = useProfile()
+  const { getProfile, updateProfile, addBodyStat, getBodyStats } = useProfile()
   const { getCatalog, getUnlocked, checkAndUnlock } = useAchievements()
   const { listFriends } = useFriends()
   const signOut = useAuthStore((s) => s.signOut)
@@ -52,11 +62,13 @@ export default function Profile() {
   const [statWeight, setStatWeight] = useState('')
   const [statDate, setStatDate] = useState(todayISO())
   const [statError, setStatError] = useState(null)
+  const [savingColor, setSavingColor] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data } = await getProfile()
+      const { data, error } = await getProfile()
+      if (error) logError('Profile.load', error)
       if (!cancelled && data) setProfile(data)
       if (!cancelled) setLoading(false)
     }
@@ -76,7 +88,7 @@ export default function Profile() {
 
   async function loadRank() {
     // Desbloquea retroactivamente lo que corresponda y calcula la XP del rango.
-    await checkAndUnlock().catch(() => {})
+    await checkAndUnlock().catch((err) => logError('Profile.checkAndUnlock', err))
     const [catalog, unlocked] = await Promise.all([getCatalog(), getUnlocked()])
     const have = new Set(unlocked.map((u) => u.achievement_id))
     setXp(catalog.filter((a) => have.has(a.id)).reduce((sum, a) => sum + (a.xp ?? 0), 0))
@@ -86,7 +98,8 @@ export default function Profile() {
     try {
       const friends = await listFriends()
       setFriendCount(friends.length)
-    } catch {
+    } catch (err) {
+      logError('Profile.loadFriendCount', err)
       setFriendCount(null)
     }
   }
@@ -97,7 +110,7 @@ export default function Profile() {
     const w = parseFloat(statWeight)
     if (!w || w <= 0) { setStatError('Ingresa un peso válido.'); return }
     const { error } = await addBodyStat(w, statDate ? new Date(statDate).toISOString() : undefined)
-    if (error) { setStatError(error.message); return }
+    if (error) { logError('Profile.handleAddStat', error); setStatError(error.message); return }
     setStatWeight('')
     setStatDate(todayISO())
     // El peso actual del perfil se sincronizó en addBodyStat: recargar ambos
@@ -105,6 +118,22 @@ export default function Profile() {
     await loadBodyStats()
     const { data: fresh } = await getProfile()
     if (fresh) setProfile(fresh)
+  }
+
+  async function handleAccentChange(key) {
+    const previous = profile?.accent_color ?? null
+    setSavingColor(key ?? GREEN_ID)
+    applyAccentColor(key) // feedback instantáneo mientras se guarda
+    const { error } = await updateProfile({ accent_color: key })
+    if (error) {
+      logError('Profile.handleAccentChange', error)
+      applyAccentColor(previous)
+      sileo.error({ title: 'No se pudo cambiar el color', description: error.message })
+    } else {
+      setProfile((p) => ({ ...p, accent_color: key }))
+      sileo.success({ title: 'Color actualizado', description: `Se aplicó ${accentColorFor(key).label} como color principal.` })
+    }
+    setSavingColor(null)
   }
 
   async function handleLogout() {
@@ -120,8 +149,9 @@ export default function Profile() {
     // al navigate y la app quedaba colgada en la pantalla de perfil.
     try {
       await signOut({ scope: 'local' })
-    } catch {
+    } catch (err) {
       // seguimos igual: lo importante es sacar al usuario de la sesión local
+      logError('Profile.handleLogout', err)
     }
     navigate('/login', { replace: true })
   }
@@ -181,9 +211,17 @@ export default function Profile() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
-                    {profile?.name || 'Sin nombre'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                      {profile?.name || 'Sin nombre'}
+                    </p>
+                    {profile?.is_premium && (
+                      <span className="chip bg-amber-400/15 text-amber-300 shrink-0">
+                        <Crown size={12} />
+                        Premium
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`chip ${rank.current.bg} ${rank.current.color}`}>{rank.current.name}</span>
                     {activityLabel && <span className="chip-muted">{activityLabel}</span>}
@@ -206,6 +244,42 @@ export default function Profile() {
                 </Link>
               </div>
             </div>
+
+            {/* Personalización — feature premium: elegir el color principal */}
+            {profile?.is_premium && (
+              <Accordion icon={Palette} title="Personalización" defaultOpen={false}>
+                <div className="card p-5 space-y-3">
+                  <p className="text-sm text-zinc-500">Elige el color principal de la app.</p>
+                  <div className="flex flex-wrap gap-3">
+                    {ACCENT_COLORS.map((c) => {
+                      const id = c.key ?? GREEN_ID
+                      const active = (profile.accent_color ?? null) === c.key
+                      const isSaving = savingColor === id
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => handleAccentChange(c.key)}
+                          disabled={savingColor !== null}
+                          aria-label={c.label}
+                          title={c.label}
+                          style={{ backgroundColor: c.base }}
+                          className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-shadow disabled:opacity-60 ${
+                            active ? 'ring-2 ring-offset-2 ring-offset-ink-900 ring-zinc-100' : ''
+                          }`}
+                        >
+                          {isSaving ? (
+                            <span className="w-4 h-4 rounded-full border-2 border-ink-950/40 border-t-ink-950 animate-spin" />
+                          ) : active ? (
+                            <Check size={16} className="text-ink-950" strokeWidth={3} />
+                          ) : null}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </Accordion>
+            )}
 
             {/* Rango — lleva a la vista de logros */}
             <Link to="/app/profile/achievements" className="block" data-tutorial="profile-rank">

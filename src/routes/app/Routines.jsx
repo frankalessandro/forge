@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, ChevronDown, LayoutList, BookOpen, CalendarDays } from 'lucide-react'
+import { ChevronRight, Dumbbell, Plus, Pencil, Trash2, Sparkles, LayoutList, BookOpen, CalendarDays } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useRoutines } from '../../hooks/useRoutines'
 import { useProfile } from '../../hooks/useProfile'
@@ -10,6 +10,8 @@ import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 import FocusBadge from '../../components/ui/FocusBadge'
 import TutorialGuide from '../../components/features/TutorialGuide'
+import Accordion from '../../components/ui/Accordion'
+import { logError } from '../../utils/logError'
 
 function RoutineCard({ routine, onOpen }) {
   return (
@@ -52,29 +54,6 @@ function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
   )
 }
 
-function Accordion({ icon: Icon, title, count, defaultOpen = true, children }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <section>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2 mb-3 group"
-      >
-        <Icon size={15} className="text-zinc-500 shrink-0" />
-        <h2 className="section-title flex-1 text-left">{title}</h2>
-        {count !== undefined && (
-          <span className="chip bg-ink-800 text-zinc-500 text-xs">{count}</span>
-        )}
-        <ChevronDown
-          size={16}
-          className={`text-zinc-500 transition-transform duration-200 ${open ? '' : '-rotate-90'}`}
-        />
-      </button>
-      {open && <div className="space-y-3">{children}</div>}
-    </section>
-  )
-}
-
 function SkeletonCard() {
   return <div className="h-[72px] card animate-pulse" />
 }
@@ -106,6 +85,7 @@ export default function Routines() {
         setGeneratedRoutines(gen)
         setProfile(prof)
       } catch (err) {
+        logError('Routines.load', err)
         setError(err.message)
       } finally {
         setLoading(false)
@@ -139,10 +119,10 @@ export default function Routines() {
         title: `${created.length} rutinas listas`,
         description: 'Reemplazaron las anteriores generadas.',
       }),
-      error: (err) => ({
-        title: 'Error al generar',
-        description: err.message,
-      }),
+      error: (err) => {
+        logError('Routines.handleGenerate', err)
+        return { title: 'Error al generar', description: err.message }
+      },
     })
   }
 
@@ -160,6 +140,7 @@ export default function Routines() {
       setGeneratedRoutines((prev) => prev.filter((r) => r.id !== routine.id))
       sileo.success({ title: 'Rutina eliminada.' })
     } catch (err) {
+      logError('Routines.handleDelete', err)
       sileo.error({ title: 'Error al eliminar', description: err.message })
     }
   }

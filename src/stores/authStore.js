@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { useWorkoutStore } from './workoutStore'
+import { useTutorialStore } from './tutorialStore'
+import { logError } from '../utils/logError'
+import { applyAccentColor } from '../utils/applyAccentColor'
 
 // Solo comprobamos si hay un token persistido para el render optimista inicial
 // (evita el flash de login si el usuario ya estaba logueado). El token en sí
@@ -29,28 +32,37 @@ export const useAuthStore = create((set) => ({
   needsOnboarding: false,
 
   init() {
-    async function resolveNeedsOnboarding(session) {
-      if (!session) return false
+    // Trae onboarding_completed + accent_color en una sola query: ambos se
+    // necesitan apenas resuelve la sesión (needsOnboarding bloquea el
+    // RootRedirect, accent_color se aplica antes de pintar la app).
+    async function resolveSessionProfile(session) {
+      if (!session) {
+        applyAccentColor(null)
+        return { needsOnboarding: false }
+      }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_completed')
+        .select('onboarding_completed, accent_color')
         .eq('user_id', session.user.id)
         .maybeSingle()
+      applyAccentColor(profile?.accent_color ?? null)
       // Flag explícito: "saltar por ahora" también lo marca, así la encuesta
       // no reaparece en cada login para quien decidió no completarla.
-      return !profile?.onboarding_completed
+      return { needsOnboarding: !profile?.onboarding_completed }
     }
 
     supabase.auth
       .getSession()
       .then(async ({ data: { session } }) => {
-        const needsOnboarding = await resolveNeedsOnboarding(session)
+        const { needsOnboarding } = await resolveSessionProfile(session)
         useWorkoutStore.getState().syncOwner(session?.user?.id ?? null)
+        if (session?.user?.id) useTutorialStore.getState().syncFromServer(session.user.id)
         set({ isAuthenticated: Boolean(session), user: session?.user ?? null, ready: true, needsOnboarding })
       })
-      .catch(() => {
+      .catch((err) => {
         // Token corrupto/inválido en localStorage: tratamos como deslogueado
         // en vez de dejar `ready` colgado en false para siempre (spinner infinito).
+        logError('authStore.init.getSession', err)
         useWorkoutStore.getState().syncOwner(null)
         set({ isAuthenticated: false, user: null, ready: true, needsOnboarding: false })
       })
@@ -68,6 +80,7 @@ export const useAuthStore = create((set) => ({
         if (!session) {
           lastUserId = null
           useWorkoutStore.getState().syncOwner(null)
+          applyAccentColor(null)
           set({ isAuthenticated: false, user: null, needsOnboarding: false })
           return
         }
@@ -79,9 +92,10 @@ export const useAuthStore = create((set) => ({
         // Si había un entreno guardado de otra cuenta en este dispositivo, se
         // descarta acá antes de que needsOnboarding/RootRedirect lleven a la UI.
         useWorkoutStore.getState().syncOwner(session.user.id)
+        useTutorialStore.getState().syncFromServer(session.user.id)
         // Resolvemos needsOnboarding antes de publicar la sesión nueva para que
         // RootRedirect no alcance a mandar al dashboard antes de saber si hace falta onboarding.
-        const needsOnboarding = await resolveNeedsOnboarding(session)
+        const { needsOnboarding } = await resolveSessionProfile(session)
         set({ isAuthenticated: true, user: session.user, needsOnboarding })
       }, 0)
     })

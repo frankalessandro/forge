@@ -9,6 +9,7 @@ import { useConfirm } from '../../hooks/useConfirm'
 import PageHeader from '../../components/ui/PageHeader'
 import CategoryBadge from '../../components/ui/CategoryBadge'
 import FocusBadge from '../../components/ui/FocusBadge'
+import { logError } from '../../utils/logError'
 
 export default function RoutineDetail() {
   const { id } = useParams()
@@ -37,7 +38,7 @@ export default function RoutineDetail() {
         // poder editarlas o entrenar directo desde ellas.
         setIsOwner(Boolean(userId && data.user_id === userId && !data.is_generated))
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('RoutineDetail.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -66,6 +67,7 @@ export default function RoutineDetail() {
       await startSessionFromRoutine(id)
       navigate('/app/workout/active')
     } catch (err) {
+      logError('RoutineDetail.handleStart', err)
       setError(err.message)
       setStarting(false)
     }
@@ -77,6 +79,7 @@ export default function RoutineDetail() {
       const newId = await copyRoutine(id)
       navigate(`/app/routines/${newId}`)
     } catch (err) {
+      logError('RoutineDetail.handleCopy', err)
       setError(err.message)
       setCopying(false)
     }

@@ -8,6 +8,7 @@ import { sileo } from 'sileo'
 import { useAuthStore } from '../../stores/authStore'
 import { useOAuthLogin } from '../../hooks/useOAuthLogin'
 import { AuthShell, OAuthButton, Divider } from './Login'
+import { logError } from '../../utils/logError'
 
 // Requisitos de contraseña fuerte. Zod evalúa en orden y muestra el primer
 // mensaje que falle, así el usuario va corrigiendo de a uno.
@@ -46,6 +47,7 @@ export default function Register() {
   const onCreateAccount = async ({ email, password }) => {
     const { data, error } = await signUp(email, password)
     if (error) {
+      logError('Register.onCreateAccount', error)
       sileo.error({ title: 'Error al crear cuenta', description: 'Probá con otro email.' })
       setError('root', { message: 'No se pudo crear la cuenta. Prueba con otro email.' })
       return

@@ -6,6 +6,7 @@ import { useWorkoutStore } from '../../../stores/workoutStore'
 import { useRoutines } from '../../../hooks/useRoutines'
 import PageHeader from '../../../components/ui/PageHeader'
 import CategoryBadge from '../../../components/ui/CategoryBadge'
+import { logError } from '../../../utils/logError'
 
 export default function Start() {
   const navigate = useNavigate()
@@ -32,7 +33,7 @@ export default function Start() {
         if (cancelled) return
         setRoutines([...gen, ...user])
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('Start.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setRoutinesLoading(false)
       }
@@ -48,6 +49,7 @@ export default function Start() {
       await startSession()
       navigate('/app/workout/active')
     } catch (err) {
+      logError('Start.handleStartFree', err)
       setError(err.message)
       setLoading(false)
     }

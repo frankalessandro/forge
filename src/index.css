@@ -26,6 +26,11 @@
 @layer base {
   html {
     color-scheme: dark;
+    /* Refuerza el bloqueo de zoom del viewport meta (algunos navegadores
+       Android ignoran user-scalable=no en gestos de pellizco) y evita el
+       scroll lateral accidental de toda la app, no solo del body. */
+    touch-action: pan-y;
+    overflow-x: hidden;
   }
   /* Altura del tab bar inferior (incluye safe-area). La usan los CTA
      fijos de las páginas para no quedar tapados por el navbar. */
@@ -34,6 +39,8 @@
   }
   body {
     @apply bg-ink-950 text-zinc-100 font-sans antialiased;
+    overflow-x: hidden;
+    width: 100%;
   }
   /* Numeric inputs: hide spinners for a cleaner sport look */
   input[type="number"]::-webkit-outer-spin-button,

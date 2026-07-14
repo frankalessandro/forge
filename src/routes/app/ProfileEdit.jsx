@@ -9,6 +9,7 @@ import { useProfile } from '../../hooks/useProfile'
 import PageHeader from '../../components/ui/PageHeader'
 import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import { GOALS, TRAINING_DAYS, MAX_GOALS } from '../../utils/routineTemplates'
+import { logError } from '../../utils/logError'
 
 const profileSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').optional().or(z.literal('')),
@@ -51,7 +52,8 @@ export default function ProfileEdit() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await getProfile()
+      const { data, error } = await getProfile()
+      if (error) logError('ProfileEdit.load', error)
       if (data) {
         reset({
           name: data.name ?? '',
@@ -85,6 +87,7 @@ export default function ProfileEdit() {
 
     const { error } = await updateProfile(clean)
     if (error) {
+      logError('ProfileEdit.onSubmit', error)
       sileo.error({ title: 'Error al guardar', description: error.message })
     } else {
       sileo.success({ title: 'Perfil guardado correctamente.' })
@@ -98,6 +101,7 @@ export default function ProfileEdit() {
     setUploadingAvatar(true)
     const { data, error } = await uploadAvatar(file)
     if (error) {
+      logError('ProfileEdit.handleAvatarChange', error)
       sileo.error({ title: 'Error al subir la foto', description: error.message })
     } else {
       setAvatarUrl(data?.avatar_url ?? avatarUrl)

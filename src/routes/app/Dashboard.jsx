@@ -7,6 +7,7 @@ import { useSchedule, resolveDay } from '../../hooks/useSchedule'
 import Stat from '../../components/ui/Stat'
 import FocusBadge from '../../components/ui/FocusBadge'
 import TutorialGuide from '../../components/features/TutorialGuide'
+import { logError } from '../../utils/logError'
 
 function greeting() {
   const h = new Date().getHours()
@@ -68,7 +69,8 @@ function TodayBanner() {
           getExceptions(now, now),
         ])
         if (!cancelled) setToday(resolveDay(now, template, exceptions))
-      } catch {
+      } catch (err) {
+        logError('Dashboard.TodayBanner', err)
         if (!cancelled) setToday(null)
       }
     }

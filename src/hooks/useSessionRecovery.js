@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useWorkoutStore } from '../stores/workoutStore'
+import { logError } from '../utils/logError'
 
 // El estado del entreno activo vive en localStorage (por dispositivo), pero la
 // sesión se crea en la DB al empezar. Si el usuario limpia el storage, cambia
@@ -121,6 +122,6 @@ export function useSessionRecovery() {
       }
     }
 
-    reconcile().catch(() => {})
+    reconcile().catch((err) => logError('useSessionRecovery.reconcile', err))
   }, [ready, userId, hasHydrated])
 }

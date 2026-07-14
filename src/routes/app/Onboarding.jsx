@@ -11,6 +11,7 @@ import { GENDERS, ACTIVITY_LEVELS } from '../../utils/healthMetrics'
 import HeightPicker, { HEIGHT_MIN, HEIGHT_MAX } from '../../components/features/HeightPicker'
 import WeightPicker, { WEIGHT_MIN, WEIGHT_MAX } from '../../components/features/WeightPicker'
 import { AuthShell } from '../auth/Login'
+import { logError } from '../../utils/logError'
 
 const STEPS = 7
 
@@ -76,6 +77,7 @@ export default function Onboarding() {
 
     const { error } = await updateProfile(payload)
     if (error) {
+      logError('Onboarding.finish.updateProfile', error)
       sileo.error({ title: 'No se pudo guardar tu perfil', description: error.message })
       setSaving(false)
       return
@@ -89,6 +91,7 @@ export default function Onboarding() {
           daysPerWeek: data.training_days_per_week !== '' ? Number(data.training_days_per_week) : 3,
         })
       } catch (err) {
+        logError('Onboarding.finish.generateForGoal', err)
         sileo.error({ title: 'No se pudieron generar tus rutinas', description: err.message })
       }
     }

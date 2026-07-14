@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Flame, Dumbbell, Layers, Trophy, Lock, ChevronRight } from 'lucide-react'
+import { Flame, Dumbbell, Layers, Trophy, Lock, ChevronRight, Crown } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
 import { GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
+import { logError } from '../../utils/logError'
 
 // Una fila de comparación amigo vs. yo. Resalta a quien va por delante.
 function CompareRow({ icon: Icon, label, mine, theirs, unit, format = (v) => v }) {
@@ -54,7 +55,7 @@ export default function PublicProfile() {
         setFriend(theirs)
         setMe(mine)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('PublicProfile.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -97,9 +98,17 @@ export default function PublicProfile() {
                 {friend.name ? friend.name[0].toUpperCase() : '?'}
               </div>
               <div className="min-w-0">
-                <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
-                  {friend.name || 'Atleta'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                    {friend.name || 'Atleta'}
+                  </p>
+                  {friend.is_premium && (
+                    <span className="chip bg-amber-400/15 text-amber-300 shrink-0">
+                      <Crown size={12} />
+                      Premium
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <span className={`chip ${friendRank.current.bg} ${friendRank.current.color}`}>{friendRank.current.name}</span>
                   {friend.goal && <span className="chip-muted">{GOAL_LABELS[friend.goal] ?? friend.goal}</span>}

@@ -8,6 +8,7 @@ import ExercisePicker from '../../components/features/ExercisePicker'
 import PageHeader from '../../components/ui/PageHeader'
 import { TAG_COLORS, DEFAULT_TAG_COLOR } from '../../utils/tagColors'
 import { FOCUS_OPTIONS } from '../../utils/routineFocus'
+import { logError } from '../../utils/logError'
 
 const metaSchema = z.object({
   name: z.string().trim().min(1, 'El nombre es requerido').max(80, 'Máximo 80 caracteres'),
@@ -136,7 +137,7 @@ export default function RoutineEditor() {
           }))
         )
       } catch (err) {
-        if (!cancelled) setSaveError(err.message)
+        if (!cancelled) { logError('RoutineEditor.load', err); setSaveError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -158,7 +159,7 @@ export default function RoutineEditor() {
           setInitialScheduledDay(value)
         }
       })
-      .catch(() => {})
+      .catch((err) => logError('RoutineEditor.getWeeklyTemplate', err))
     return () => { cancelled = true }
   }, [getWeeklyTemplate, isEdit, id])
 
@@ -255,6 +256,7 @@ export default function RoutineEditor() {
 
       navigate(`/app/routines/${routineId}`, { replace: true })
     } catch (err) {
+      logError('RoutineEditor.handleSave', err)
       setSaveError(err.message)
       setSaving(false)
     }

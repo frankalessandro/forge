@@ -6,6 +6,7 @@ import { useSchedule, resolveDay, toDateKey, DAY_ROWS } from '../../hooks/useSch
 import PageHeader from '../../components/ui/PageHeader'
 import FocusBadge from '../../components/ui/FocusBadge'
 import TutorialGuide from '../../components/features/TutorialGuide'
+import { logError } from '../../utils/logError'
 
 const WEEKDAY_HEADERS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do']
 
@@ -51,6 +52,7 @@ function DaySheet({ date, template, ownRoutines, currentOverride, onSave, onClos
       await onSave(choice)
       onClose()
     } catch (err) {
+      logError('Schedule.DaySheet.save', err)
       sileo.error({ title: 'Error al guardar', description: err.message })
       setSaving(false)
     }
@@ -136,7 +138,7 @@ export default function Schedule() {
         setOwnRoutines(user)
         setTemplateState(tmpl)
       } catch (err) {
-        if (!cancelled) setError(err.message)
+        if (!cancelled) { logError('Schedule.load', err); setError(err.message) }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -155,7 +157,7 @@ export default function Schedule() {
     let cancelled = false
     fetchExceptions(monthCursor)
       .then((map) => { if (!cancelled) setExceptions(map) })
-      .catch((err) => { if (!cancelled) setError(err.message) })
+      .catch((err) => { if (!cancelled) { logError('Schedule.fetchExceptions', err); setError(err.message) } })
     return () => { cancelled = true }
   }, [monthCursor, fetchExceptions])
 
@@ -166,6 +168,7 @@ export default function Schedule() {
     try {
       await setTemplateDay(dow, routineId || null)
     } catch (err) {
+      logError('Schedule.handleTemplateChange', err)
       setTemplateState(prev)
       sileo.error({ title: 'Error al guardar', description: err.message })
     }
