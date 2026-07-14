@@ -13,6 +13,43 @@ import TutorialGuide from '../../components/features/TutorialGuide'
 import Accordion from '../../components/ui/Accordion'
 import { logError } from '../../utils/logError'
 
+// Thumbnail individual con skeleton mientras la imagen carga (key por `src`
+// para que el estado se reinicie cuando cambia, ej. al regenerar la rutina).
+function PreviewThumb({ src, zIndex }) {
+  const [status, setStatus] = useState('loading')
+  return (
+    <div
+      className="relative w-8 h-8 rounded-full bg-ink-900 border-2 border-ink-950 overflow-hidden"
+      style={{ zIndex }}
+    >
+      {status === 'loading' && <div className="absolute inset-0 animate-pulse bg-ink-800" />}
+      {status !== 'error' && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          onLoad={() => setStatus('loaded')}
+          onError={() => setStatus('error')}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+    </div>
+  )
+}
+
+// Stack de thumbnails de los primeros ejercicios de la rutina, superpuestos.
+// Si no hay imágenes (rutina sin ejercicios o catálogo sin fotos), no renderiza nada.
+function ExercisePreviewStack({ images }) {
+  if (!images?.length) return null
+  return (
+    <div className="flex items-center -space-x-2.5 shrink-0">
+      {images.map((src, i) => (
+        <PreviewThumb key={src} src={src} zIndex={images.length - i} />
+      ))}
+    </div>
+  )
+}
+
 function RoutineCard({ routine, onOpen }) {
   return (
     <button onClick={onOpen} className="w-full card card-hover flex items-center gap-4 px-5 py-4 text-left">
@@ -25,6 +62,7 @@ function RoutineCard({ routine, onOpen }) {
         {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
         <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
       </div>
+      <ExercisePreviewStack images={routine.previewImages} />
       <ChevronRight size={18} className="text-zinc-600 shrink-0" />
     </button>
   )
@@ -33,14 +71,17 @@ function RoutineCard({ routine, onOpen }) {
 function UserRoutineCard({ routine, onOpen, onEdit, onDelete }) {
   return (
     <div className="card flex items-center gap-2 px-5 py-4">
-      <button onClick={onOpen} className="flex-1 min-w-0 text-left">
-        <div className="flex items-center gap-2 mb-1">
-          <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
-          <FocusBadge focus={routine.focus} />
-          <CategoryBadge category={routine.category} color={routine.category_color} />
+      <button onClick={onOpen} className="flex-1 min-w-0 flex items-center gap-3 text-left">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="display text-sm text-zinc-100 truncate">{routine.name}</p>
+            <FocusBadge focus={routine.focus} />
+            <CategoryBadge category={routine.category} color={routine.category_color} />
+          </div>
+          {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
+          <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
         </div>
-        {routine.description && <p className="text-sm text-zinc-500 truncate">{routine.description}</p>}
-        <p className="eyebrow mt-1.5">{routine.exerciseCount} ejercicios</p>
+        <ExercisePreviewStack images={routine.previewImages} />
       </button>
       <div className="flex items-center gap-1 shrink-0">
         <button onClick={onEdit} className="p-2 text-zinc-500 hover:text-accent transition-colors">

@@ -167,7 +167,20 @@ function buildSplit(daysPerWeek) {
   return splits[d]
 }
 
-// Agrupa el catálogo por grupo muscular, ordenando cada pool por prioridad de equipo.
+// Fisher-Yates: mezcla sin mutar el array original.
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// Agrupa el catálogo por grupo muscular. Dentro de cada pool se respeta la
+// prioridad de equipo (barra > peso corporal > mancuerna > máquina > polea),
+// pero el orden dentro de cada nivel se mezcla en cada llamada: así la
+// preferencia de equipo se mantiene y a la vez cada generación varía.
 function buildPools(exercises) {
   const pools = {}
   for (const ex of exercises) {
@@ -177,11 +190,15 @@ function buildPools(exercises) {
     ;(pools[muscleName] ??= []).push(item)
   }
   for (const key of Object.keys(pools)) {
-    pools[key].sort(
-      (a, b) =>
-        (EQUIPMENT_RANK[a.equipment] ?? 9) - (EQUIPMENT_RANK[b.equipment] ?? 9) ||
-        a.name.localeCompare(b.name),
-    )
+    const tiers = new Map()
+    for (const item of pools[key]) {
+      const rank = EQUIPMENT_RANK[item.equipment] ?? 9
+      if (!tiers.has(rank)) tiers.set(rank, [])
+      tiers.get(rank).push(item)
+    }
+    pools[key] = [...tiers.keys()]
+      .sort((a, b) => a - b)
+      .flatMap((rank) => shuffle(tiers.get(rank)))
   }
   return pools
 }
@@ -198,17 +215,23 @@ function clampSets(n) {
 
 // Elige `n` ejercicios para un slot, sin repetir los ya usados en el día.
 // `variant` desplaza el punto de partida para variar entre días A/B.
-function pickExercises(pools, muscles, n, variant, used) {
+// `excludeIds` son ejercicios de la última rutina generada: se evitan si
+// quedan suficientes alternativas para el slot, para no repetir de una
+// generación a la siguiente.
+function pickExercises(pools, muscles, n, variant, used, excludeIds) {
   const candidates = []
   for (const m of muscles) {
     for (const ex of pools[m] ?? []) candidates.push(ex)
   }
   if (candidates.length === 0) return []
 
+  const fresh = excludeIds ? candidates.filter((ex) => !excludeIds.has(ex.id)) : candidates
+  const ordered = fresh.length >= n ? fresh : candidates
+
   const result = []
-  const offset = variant ? Math.floor(candidates.length / 2) : 0
-  for (let i = 0; i < candidates.length && result.length < n; i++) {
-    const ex = candidates[(i + offset) % candidates.length]
+  const offset = variant ? Math.floor(ordered.length / 2) : 0
+  for (let i = 0; i < ordered.length && result.length < n; i++) {
+    const ex = ordered[(i + offset) % ordered.length]
     if (used.has(ex.id)) continue
     used.add(ex.id)
     result.push(ex)
@@ -224,9 +247,10 @@ function pickExercises(pools, muscles, n, variant, used) {
  * @param {string}   params.level        beginner | intermediate | advanced
  * @param {number}   params.daysPerWeek  1..7
  * @param {Array}    params.exercises    catálogo: { id, name, equipment, primary_muscles, muscle_groups:{name} }
+ * @param {Set}      [params.excludeIds] ids de ejercicios de la última generación, a evitar si hay alternativas
  * @returns {Array}  rutinas: [{ name, category, description, exercises: [{ exercise_id, name, muscle, sets, reps, rest_seconds }] }]
  */
-export function planSplit({ goal, level = 'intermediate', daysPerWeek, exercises }) {
+export function planSplit({ goal, level = 'intermediate', daysPerWeek, exercises, excludeIds }) {
   const scheme = GOAL_SCHEME[goal] ?? GOAL_SCHEME.health
   const goalLabel = GOAL_LABELS[goal] ?? GOAL_LABELS.health
   const days = buildSplit(daysPerWeek)
@@ -239,7 +263,7 @@ export function planSplit({ goal, level = 'intermediate', daysPerWeek, exercises
       const picked = []
       for (const slot of day.slots) {
         const n = countFor(slot, level)
-        const chosen = pickExercises(pools, slot.muscles, n, day.variant, used)
+        const chosen = pickExercises(pools, slot.muscles, n, day.variant, used, excludeIds)
         const s = slot.compound ? scheme.compound : scheme.accessory
         for (const ex of chosen) {
           picked.push({

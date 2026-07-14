@@ -3,48 +3,63 @@ import { supabase } from '../lib/supabase'
 import { getCurrentUserId } from '../stores/authStore'
 import { planSplit } from '../utils/routineTemplates'
 
+// Selección base para listados de rutinas: cuenta total de ejercicios más
+// una preview limitada a 4 imágenes (alias `preview`, ordenada por "order")
+// para mostrar thumbnails en las tarjetas sin traer la rutina completa.
+const ROUTINE_LIST_SELECT = `
+  id, name, description, category, category_color, focus,
+  routine_exercises(count),
+  preview:routine_exercises(order, exercises(image_url))
+`
+
+function withPreview(r) {
+  const { routine_exercises, preview, ...rest } = r
+  return {
+    ...rest,
+    exerciseCount: routine_exercises?.[0]?.count ?? 0,
+    previewImages: (preview ?? []).map((re) => re.exercises?.image_url).filter(Boolean),
+  }
+}
+
 export function useRoutines() {
   const getPublicRoutines = useCallback(async () => {
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
+      .select(ROUTINE_LIST_SELECT)
       .eq('is_public', true)
+      .order('order', { foreignTable: 'preview', ascending: true })
+      .limit(4, { foreignTable: 'preview' })
       .order('category')
     if (error) throw error
-    return data.map((r) => ({
-      ...r,
-      exerciseCount: r.routine_exercises?.[0]?.count ?? 0,
-    }))
+    return data.map(withPreview)
   }, [])
 
   const getUserRoutines = useCallback(async () => {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
+      .select(ROUTINE_LIST_SELECT)
       .eq('user_id', userId)
       .eq('is_generated', false)
+      .order('order', { foreignTable: 'preview', ascending: true })
+      .limit(4, { foreignTable: 'preview' })
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data.map((r) => ({
-      ...r,
-      exerciseCount: r.routine_exercises?.[0]?.count ?? 0,
-    }))
+    return data.map(withPreview)
   }, [])
 
   const getGeneratedRoutines = useCallback(async () => {
     const userId = getCurrentUserId()
     const { data, error } = await supabase
       .from('routines')
-      .select('id, name, description, category, category_color, focus, routine_exercises(count)')
+      .select(ROUTINE_LIST_SELECT)
       .eq('user_id', userId)
       .eq('is_generated', true)
+      .order('order', { foreignTable: 'preview', ascending: true })
+      .limit(4, { foreignTable: 'preview' })
       .order('created_at', { ascending: true })
     if (error) throw error
-    return data.map((r) => ({
-      ...r,
-      exerciseCount: r.routine_exercises?.[0]?.count ?? 0,
-    }))
+    return data.map(withPreview)
   }, [])
 
   const getRoutineDetail = useCallback(async (id) => {
@@ -149,13 +164,30 @@ export function useRoutines() {
   // generadas anteriores e inserta el split completo en la misma transacción.
   // Antes eran ~2 round-trips en serie por cada rutina del split, y un fallo
   // a mitad de camino dejaba la generación incompleta.
+  //
+  // Antes de generar, se traen los ejercicios de la última generación para
+  // evitarlos si hay alternativas (junto con la mezcla dentro de cada pool en
+  // routineTemplates), así regenerar da una rutina distinta cada vez en vez
+  // de repetir siempre la misma.
   const generateForGoal = useCallback(async ({ goal, level, daysPerWeek }) => {
-    const { data: exercises, error: exError } = await supabase
-      .from('exercises')
-      .select('id, name, equipment, primary_muscles, muscle_groups(name)')
+    const userId = getCurrentUserId()
+    const [{ data: exercises, error: exError }, { data: prevRoutines, error: prevError }] =
+      await Promise.all([
+        supabase.from('exercises').select('id, name, equipment, primary_muscles, muscle_groups(name)'),
+        supabase
+          .from('routines')
+          .select('routine_exercises(exercise_id)')
+          .eq('user_id', userId)
+          .eq('is_generated', true),
+      ])
     if (exError) throw exError
+    if (prevError) throw prevError
 
-    const plan = planSplit({ goal, level, daysPerWeek, exercises: exercises ?? [] })
+    const excludeIds = new Set(
+      (prevRoutines ?? []).flatMap((r) => r.routine_exercises?.map((re) => re.exercise_id) ?? []),
+    )
+
+    const plan = planSplit({ goal, level, daysPerWeek, exercises: exercises ?? [], excludeIds })
     if (plan.length === 0) {
       throw new Error('No hay ejercicios suficientes para generar la rutina.')
     }
