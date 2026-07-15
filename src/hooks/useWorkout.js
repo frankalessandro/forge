@@ -232,6 +232,23 @@ export function useWorkout() {
     useWorkoutStore.getState().cancelSession()
   }, [])
 
+  // Borra un entrenamiento YA FINALIZADO. La ventana de 24h desde finished_at
+  // se valida server-side en la policy de RLS (workout_sessions_delete_own),
+  // no solo aquí: si ya pasó, Supabase no borra ninguna fila (no lanza error,
+  // .delete() sin match simplemente no afecta filas), así que verificamos el
+  // conteo para poder avisarle al usuario.
+  const deleteFinishedSession = useCallback(async (sessionId) => {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .select('id')
+    if (error) throw error
+    if (!data || data.length === 0) {
+      throw new Error('Ya no se puede eliminar: pasaron más de 24 horas desde que finalizó.')
+    }
+  }, [])
+
   // Última performance de VARIOS ejercicios en 2 queries totales (antes eran
   // 2 por ejercicio: una rutina de 8 disparaba 16 queries al montar el entreno):
   //   1) las sesiones finalizadas recientes (orden desc)
@@ -288,6 +305,7 @@ export function useWorkout() {
     deleteExercise,
     finishSession,
     cancelSession,
+    deleteFinishedSession,
     getLastPerformances,
   }
 }

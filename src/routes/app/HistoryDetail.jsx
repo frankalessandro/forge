@@ -1,22 +1,33 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Trophy, ChevronRight, Dumbbell, Clock, Weight, ListChecks, Users, Lock } from 'lucide-react'
+import { Trophy, ChevronRight, Dumbbell, Clock, Weight, ListChecks, Users, Lock, Trash2 } from 'lucide-react'
 import { sileo } from 'sileo'
 import PageHeader from '../../components/ui/PageHeader'
 import { calcVolume } from '../../utils/weight'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 import { bestSet, SET_TYPE_LABEL, SET_TYPE_COLOR } from '../../utils/workoutSets'
 import { useSessionDetail } from '../../hooks/useSessionDetail'
+import { useWorkout } from '../../hooks/useWorkout'
+import { useConfirm } from '../../hooks/useConfirm'
 import { logError } from '../../utils/logError'
+
+const DELETE_WINDOW_MS = 24 * 60 * 60 * 1000
 
 export function SessionDetail({ title, back, sessionId, hero, cta, showVisibilityToggle = false }) {
   const navigate = useNavigate()
   const { data, loading, error, setPublic } = useSessionDetail(sessionId)
+  const { deleteFinishedSession } = useWorkout()
+  const { confirm, modal } = useConfirm()
   const session = data?.session ?? null
   const groupedSets = data?.groupedSets ?? []
   const [togglingVisibility, setTogglingVisibility] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  // Date.now() es impuro: se captura una sola vez al montar (igual que el
+  // patrón ya usado en Active.jsx) en vez de llamarlo en el cuerpo del render.
+  const [now] = useState(() => Date.now())
 
   const totalVolume = calcVolume(groupedSets.flatMap((g) => g.sets))
+  const canDelete = !!session?.finished_at && now - new Date(session.finished_at).getTime() < DELETE_WINDOW_MS
 
   async function handleToggleVisibility() {
     setTogglingVisibility(true)
@@ -32,9 +43,45 @@ export function SessionDetail({ title, back, sessionId, hero, cta, showVisibilit
     }
   }
 
+  async function handleDelete() {
+    const ok = await confirm({
+      title: '¿Eliminar entrenamiento?',
+      description: 'Se borrará junto con todas sus series. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      danger: true,
+    })
+    if (!ok) return
+    setDeleting(true)
+    try {
+      await deleteFinishedSession(sessionId)
+      sileo.success({ title: 'Entrenamiento eliminado.' })
+      navigate(typeof back === 'string' ? back : '/app/history', { replace: true })
+    } catch (err) {
+      logError('SessionDetail.delete', err)
+      sileo.error({ title: 'No se pudo eliminar', description: err.message })
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-ink-950">
-      <PageHeader title={title} back={back} />
+      {modal}
+      <PageHeader
+        title={title}
+        back={back}
+        right={
+          canDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-50"
+              aria-label="Eliminar entrenamiento"
+            >
+              <Trash2 size={18} />
+            </button>
+          )
+        }
+      />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-6">
         {loading && (
