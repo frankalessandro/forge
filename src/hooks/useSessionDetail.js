@@ -18,7 +18,7 @@ export function useSessionDetail(sessionId) {
 
       const { data: sess, error: sessErr } = await supabase
         .from('workout_sessions')
-        .select('id, started_at, finished_at, notes')
+        .select('id, started_at, finished_at, notes, is_public')
         .eq('id', sessionId)
         .single()
 
@@ -57,5 +57,21 @@ export function useSessionDetail(sessionId) {
     return () => { cancelled = true }
   }, [sessionId])
 
-  return { data, loading, error }
+  // Cambia si el entrenamiento es visible para amigos. Optimista: refleja el
+  // cambio localmente y revierte si el update falla.
+  async function setPublic(isPublic) {
+    if (!sessionId) return
+    const previous = data?.session?.is_public
+    setData((d) => (d ? { ...d, session: { ...d.session, is_public: isPublic } } : d))
+    const { error: err } = await supabase
+      .from('workout_sessions')
+      .update({ is_public: isPublic })
+      .eq('id', sessionId)
+    if (err) {
+      setData((d) => (d ? { ...d, session: { ...d.session, is_public: previous } } : d))
+      throw err
+    }
+  }
+
+  return { data, loading, error, setPublic }
 }

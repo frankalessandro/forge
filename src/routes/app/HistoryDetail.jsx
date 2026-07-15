@@ -1,18 +1,36 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Trophy, ChevronRight, Dumbbell, Clock, Weight, ListChecks } from 'lucide-react'
+import { Trophy, ChevronRight, Dumbbell, Clock, Weight, ListChecks, Users, Lock } from 'lucide-react'
+import { sileo } from 'sileo'
 import PageHeader from '../../components/ui/PageHeader'
 import { calcVolume } from '../../utils/weight'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 import { bestSet, SET_TYPE_LABEL, SET_TYPE_COLOR } from '../../utils/workoutSets'
 import { useSessionDetail } from '../../hooks/useSessionDetail'
+import { logError } from '../../utils/logError'
 
-export function SessionDetail({ title, back, sessionId, hero, cta }) {
+export function SessionDetail({ title, back, sessionId, hero, cta, showVisibilityToggle = false }) {
   const navigate = useNavigate()
-  const { data, loading, error } = useSessionDetail(sessionId)
+  const { data, loading, error, setPublic } = useSessionDetail(sessionId)
   const session = data?.session ?? null
   const groupedSets = data?.groupedSets ?? []
+  const [togglingVisibility, setTogglingVisibility] = useState(false)
 
   const totalVolume = calcVolume(groupedSets.flatMap((g) => g.sets))
+
+  async function handleToggleVisibility() {
+    setTogglingVisibility(true)
+    try {
+      const next = !session.is_public
+      await setPublic(next)
+      sileo.success({ title: next ? 'Visible para tus amigos.' : 'Ahora es privado.' })
+    } catch (err) {
+      logError('SessionDetail.toggleVisibility', err)
+      sileo.error({ title: 'No se pudo cambiar la visibilidad', description: err.message })
+    } finally {
+      setTogglingVisibility(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-ink-950">
@@ -65,6 +83,30 @@ export function SessionDetail({ title, back, sessionId, hero, cta }) {
                 </div>
               </div>
             </div>
+
+            {showVisibilityToggle && (
+              <button
+                type="button"
+                onClick={handleToggleVisibility}
+                disabled={togglingVisibility}
+                className="w-full card flex items-center gap-3 px-4 py-3.5 text-left disabled:opacity-60"
+              >
+                <div className={`rounded-xl p-2 shrink-0 ${session.is_public ? 'bg-accent/15 text-accent' : 'bg-ink-800 text-zinc-500'}`}>
+                  {session.is_public ? <Users size={18} /> : <Lock size={18} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="display text-sm text-zinc-100">
+                    {session.is_public ? 'Visible para tus amigos' : 'Solo tú lo ves'}
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Toca para {session.is_public ? 'ocultarlo' : 'compartirlo'}</p>
+                </div>
+                <div className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${session.is_public ? 'bg-accent' : 'bg-ink-700'}`}>
+                  <div
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-ink-950 transition-transform ${session.is_public ? 'translate-x-5.5' : 'translate-x-0.5'}`}
+                  />
+                </div>
+              </button>
+            )}
 
             {session.notes && (
               <div className="card p-4">

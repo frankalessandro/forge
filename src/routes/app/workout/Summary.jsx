@@ -27,6 +27,6 @@ export default function Summary() {
   )
 
   return (
-    <SessionDetail title="Resumen" back="/app/dashboard" sessionId={sessionId} hero={hero} cta={cta} />
+    <SessionDetail title="Resumen" back="/app/dashboard" sessionId={sessionId} hero={hero} cta={cta} showVisibilityToggle />
   )
 }
