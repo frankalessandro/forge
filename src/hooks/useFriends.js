@@ -25,10 +25,26 @@ export function useFriends() {
     return data ?? []
   }, [])
 
+  const listSentRequests = useCallback(async () => {
+    const { data, error } = await supabase.rpc('list_sent_requests')
+    if (error) throw error
+    return data ?? []
+  }, [])
+
   const sendRequest = useCallback(async (targetUserId) => {
     const { data, error } = await supabase.rpc('send_friend_request', { target: targetUserId })
     if (error) throw error
     return data // 'sent' | 'accepted' | 'exists' | 'self'
+  }, [])
+
+  // Agregar por ID exacto (username#tag).
+  const addFriendByTag = useCallback(async (username, tag) => {
+    const { data, error } = await supabase.rpc('add_friend_by_tag', {
+      p_username: username,
+      p_tag: tag,
+    })
+    if (error) throw error
+    return data // 'sent' | 'accepted' | 'exists' | 'self' | 'not_found'
   }, [])
 
   const acceptRequest = useCallback(async (friendshipId) => {
@@ -63,5 +79,5 @@ export function useFriends() {
     return data ?? []
   }, [])
 
-  return { searchUsers, listFriends, listRequests, sendRequest, acceptRequest, removeFriendship, getFriendProfile, getFriendWorkouts, getFriendSessionSets }
+  return { searchUsers, listFriends, listRequests, listSentRequests, sendRequest, addFriendByTag, acceptRequest, removeFriendship, getFriendProfile, getFriendWorkouts, getFriendSessionSets }
 }

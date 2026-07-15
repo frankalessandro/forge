@@ -76,6 +76,14 @@ export function useProfile() {
     return result
   }, [])
 
+  // Cambiar username y (opcionalmente) tag. Solo premium; la regla se valida en
+  // la base. Retorna { ok, username, tag } o { ok:false, error }.
+  const setUsername = useCallback(async (username, tag) => {
+    const { data, error } = await supabase.rpc('set_username', { p_username: username, p_tag: tag ?? null })
+    if (error) throw error
+    return data
+  }, [])
+
   const getBodyStats = useCallback(async () => {
     const userId = useAuthStore.getState().user?.id
     if (!userId) return { data: [], error: new Error('Not authenticated') }
@@ -87,5 +95,5 @@ export function useProfile() {
       .limit(30)
   }, [])
 
-  return { getProfile, updateProfile, uploadAvatar, addBodyStat, getBodyStats }
+  return { getProfile, updateProfile, uploadAvatar, setUsername, addBodyStat, getBodyStats }
 }

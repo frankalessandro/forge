@@ -4,6 +4,7 @@ import { Flame, Dumbbell, Layers, Trophy, Lock, ChevronRight, Crown } from 'luci
 import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
+import { formatUserTag } from '../../utils/userTag'
 import { GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
 import { logError } from '../../utils/logError'
@@ -94,23 +95,32 @@ export default function PublicProfile() {
           <>
             {/* Cabecera */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-accent/15 text-accent flex items-center justify-center shrink-0 font-display font-bold text-2xl">
-                {friend.name ? friend.name[0].toUpperCase() : '?'}
+              <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                {friend.avatar_url ? (
+                  <img src={friend.avatar_url} alt={friend.name || 'Avatar'} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-accent flex items-center justify-center">
+                    <span className="text-ink-950 text-3xl font-display font-bold">
+                      {friend.name ? friend.name[0].toUpperCase() : '?'}
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
-                    {friend.name || 'Atleta'}
-                  </p>
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                  {friend.name || 'Atleta'}
+                </p>
+                {friend.username && (
+                  <p className="text-sm text-zinc-500 font-mono mt-1.5 truncate">{formatUserTag(friend.username, friend.tag)}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className={`chip ${friendRank.current.bg} ${friendRank.current.color}`}>{friendRank.current.name}</span>
                   {friend.is_premium && (
                     <span className="chip bg-amber-400/15 text-amber-300 shrink-0">
                       <Crown size={12} />
                       Premium
                     </span>
                   )}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`chip ${friendRank.current.bg} ${friendRank.current.color}`}>{friendRank.current.name}</span>
                   {friend.goal && <span className="chip-muted">{GOAL_LABELS[friend.goal] ?? friend.goal}</span>}
                 </div>
               </div>

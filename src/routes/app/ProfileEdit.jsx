@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Camera, Check } from 'lucide-react'
+import { Camera, Check, Lock } from 'lucide-react'
 import { sileo } from 'sileo'
 import { useProfile } from '../../hooks/useProfile'
 import PageHeader from '../../components/ui/PageHeader'
@@ -27,12 +27,17 @@ const profileSchema = z.object({
 
 export default function ProfileEdit() {
   const navigate = useNavigate()
-  const { getProfile, updateProfile, uploadAvatar } = useProfile()
+  const { getProfile, updateProfile, uploadAvatar, setUsername } = useProfile()
 
   const [loading, setLoading] = useState(true)
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [goals, setGoals] = useState([])
+  const [isPremium, setIsPremium] = useState(false)
+  const [initialUsername, setInitialUsername] = useState('')
+  const [username, setUsernameValue] = useState('')
+  const [initialTag, setInitialTag] = useState('')
+  const [tag, setTag] = useState('')
   const avatarInputRef = useRef(null)
 
   const toggleGoal = (value) =>
@@ -66,6 +71,11 @@ export default function ProfileEdit() {
         })
         setGoals(data.goals ?? (data.goal ? [data.goal] : []))
         setAvatarUrl(data.avatar_url ?? null)
+        setIsPremium(data.is_premium ?? false)
+        setInitialUsername(data.username ?? '')
+        setUsernameValue(data.username ?? '')
+        setInitialTag(data.tag ?? '')
+        setTag(data.tag ?? '')
       }
       setLoading(false)
     }
@@ -84,6 +94,41 @@ export default function ProfileEdit() {
     // Objetivos: array completo + `goal` principal (goals[0]) por compatibilidad.
     clean.goals = goals.length ? goals : null
     clean.goal = goals[0] ?? null
+
+    // Username/tag: solo premium y solo si cambió alguno. Va por su propio RPC
+    // (la regla se valida en la base, no aquí).
+    const nextUsername = username.trim().toLowerCase()
+    const nextTag = tag.trim().toLowerCase()
+    if (isPremium && (nextUsername !== initialUsername || nextTag !== initialTag)) {
+      if (!/^[a-z0-9_]{3,12}$/.test(nextUsername)) {
+        sileo.error({ title: 'Usuario inválido', description: '3-12 caracteres: letras, números o guión bajo.' })
+        return
+      }
+      if (!/^[a-z0-9]{1,5}$/.test(nextTag)) {
+        sileo.error({ title: 'Tag inválido', description: '1-5 caracteres: letras o números.' })
+        return
+      }
+      try {
+        const res = await setUsername(nextUsername, nextTag)
+        if (!res?.ok) {
+          const msg =
+            res?.error === 'not_premium' ? 'Solo premium puede cambiar el usuario.'
+            : res?.error === 'tag_taken' ? 'Ese tag ya está en uso con ese usuario. Prueba otro.'
+            : res?.error === 'invalid_tag' ? 'Tag inválido.'
+            : 'No se pudo cambiar el usuario.'
+          sileo.error({ title: msg })
+          return
+        }
+        setInitialUsername(res.username)
+        setUsernameValue(res.username)
+        setInitialTag(res.tag)
+        setTag(res.tag)
+      } catch (err) {
+        logError('ProfileEdit.setUsername', err)
+        sileo.error({ title: 'Error al cambiar el usuario', description: err.message })
+        return
+      }
+    }
 
     const { error } = await updateProfile(clean)
     if (error) {
@@ -170,6 +215,45 @@ export default function ProfileEdit() {
             </div>
 
             <div className="card p-5 space-y-4">
+              <div>
+                <label className="field-label">Usuario</label>
+                {isPremium ? (
+                  <>
+                    <div className="flex items-stretch gap-2">
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsernameValue(e.target.value)}
+                        maxLength={12}
+                        className="input font-mono flex-1"
+                        placeholder="tu_usuario"
+                      />
+                      <div className="relative w-28 shrink-0">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono pointer-events-none">#</span>
+                        <input
+                          type="text"
+                          value={tag.toUpperCase()}
+                          onChange={(e) => setTag(e.target.value.toLowerCase())}
+                          maxLength={5}
+                          className="input font-mono pl-6 uppercase"
+                          placeholder="TAG"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-600 mt-1">Usuario 3-12 · tag 1-5 caracteres. El par debe ser único.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="input font-mono flex items-center text-zinc-400 select-all">
+                      {username}<span className="text-zinc-600">#{tag.toUpperCase()}</span>
+                    </div>
+                    <p className="text-xs text-amber-400/80 mt-1 flex items-center gap-1">
+                      <Lock size={12} /> Cambiar tu usuario y tag es una función premium.
+                    </p>
+                  </>
+                )}
+              </div>
+
               <div>
                 <label className="field-label">Nombre</label>
                 <input type="text" {...register('name')} className="input" placeholder="Tu nombre" />

@@ -3,41 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Dumbbell, ChevronLeft, ChevronRight, Flame, TrendingUp, Trophy, Play } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Metric from '../../components/ui/Metric'
+import ExerciseThumbs from '../../components/ui/ExerciseThumbs'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 import { useHistory } from '../../hooks/useHistory'
 import { useAchievements } from '../../hooks/useAchievements'
 import { logError } from '../../utils/logError'
 import TutorialGuide from '../../components/features/TutorialGuide'
-
-function ExerciseThumbs({ thumbs, extra }) {
-  if (!thumbs?.length) return null
-  return (
-    <div className="flex items-center">
-      {thumbs.map((t, i) => (
-        <div
-          key={t.id}
-          className="w-8 h-8 rounded-full bg-ink-800 ring-2 ring-ink-900 overflow-hidden shrink-0 flex items-center justify-center"
-          style={{ marginLeft: i === 0 ? 0 : -10, zIndex: thumbs.length - i }}
-          title={t.name}
-        >
-          {t.imageUrl ? (
-            <img src={t.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <Dumbbell size={13} className="text-zinc-600" />
-          )}
-        </div>
-      ))}
-      {extra > 0 && (
-        <div
-          className="w-8 h-8 rounded-full bg-ink-800 ring-2 ring-ink-900 flex items-center justify-center shrink-0 text-[10px] font-display font-semibold text-zinc-400"
-          style={{ marginLeft: -10 }}
-        >
-          +{extra}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function History() {
   const navigate = useNavigate()

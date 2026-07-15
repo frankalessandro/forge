@@ -4,6 +4,8 @@ import { Dumbbell } from 'lucide-react'
 import { useFriends } from '../../hooks/useFriends'
 import PageHeader from '../../components/ui/PageHeader'
 import Metric from '../../components/ui/Metric'
+import ExerciseThumbs from '../../components/ui/ExerciseThumbs'
+import { formatUserTag } from '../../utils/userTag'
 import { formatDuration, formatDay, formatHour } from '../../utils/duration'
 import { logError } from '../../utils/logError'
 
@@ -13,7 +15,7 @@ export default function FriendWorkouts() {
   const { getFriendWorkouts, getFriendProfile } = useFriends()
 
   const [sessions, setSessions] = useState([])
-  const [friendName, setFriendName] = useState('')
+  const [friend, setFriend] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -27,7 +29,7 @@ export default function FriendWorkouts() {
         ])
         if (cancelled) return
         setSessions(workouts)
-        setFriendName(profile?.name ?? '')
+        setFriend(profile ?? null)
       } catch (err) {
         if (!cancelled) { logError('FriendWorkouts.load', err); setError(err.message) }
       } finally {
@@ -40,11 +42,29 @@ export default function FriendWorkouts() {
 
   return (
     <div className="min-h-screen bg-ink-950">
-      <PageHeader title={friendName ? `Historial de ${friendName}` : 'Historial'} back={`/app/u/${userId}`} />
+      <PageHeader title="Historial" back={`/app/u/${userId}`} />
 
       <main className="max-w-2xl mx-auto px-5 py-6 space-y-3">
         {error && (
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+        )}
+
+        {friend && (
+          <div className="card flex items-center gap-3 px-4 py-3">
+            {friend.avatar_url ? (
+              <img src={friend.avatar_url} alt={friend.name || 'Avatar'} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+            ) : (
+              <div className="w-11 h-11 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0 font-display font-bold">
+                {friend.name ? friend.name[0].toUpperCase() : '?'}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="display text-sm text-zinc-100 truncate">{friend.name || 'Atleta'}</p>
+              {friend.username && (
+                <p className="text-xs text-zinc-500 font-mono truncate">{formatUserTag(friend.username, friend.tag)}</p>
+              )}
+            </div>
+          </div>
         )}
 
         {loading && (
@@ -60,27 +80,34 @@ export default function FriendWorkouts() {
           </div>
         )}
 
-        {!loading && sessions.map((sess) => (
-          <button
-            key={sess.id}
-            onClick={() => navigate(`/app/u/${userId}/workouts/${sess.id}`)}
-            className="w-full card card-hover p-4 text-left"
-          >
-            <div className="flex items-center justify-between">
-              <p className="display text-sm text-zinc-100 capitalize">{formatDay(sess.started_at)}</p>
-              <span className="text-xs text-zinc-600 tabular-nums">{formatHour(sess.started_at)}</span>
-            </div>
-            <div className="flex gap-5 mt-2.5">
-              <Metric value={formatDuration(sess.started_at, sess.finished_at)} label="dur" />
-              {Number(sess.exercise_count) > 0 && (
-                <Metric value={sess.exercise_count} label="ejerc" />
-              )}
-              {Number(sess.volume) > 0 && (
-                <Metric value={Number(sess.volume).toLocaleString('es')} label="kg" />
-              )}
-            </div>
-          </button>
-        ))}
+        {!loading && sessions.map((sess) => {
+          const thumbs = sess.thumbs ?? []
+          const extraThumbs = Math.max(0, Number(sess.exercise_count) - thumbs.length)
+          return (
+            <button
+              key={sess.id}
+              onClick={() => navigate(`/app/u/${userId}/workouts/${sess.id}`)}
+              className="w-full card card-hover p-4 text-left"
+            >
+              <div className="flex items-center justify-between">
+                <p className="display text-sm text-zinc-100 capitalize">{formatDay(sess.started_at)}</p>
+                <span className="text-xs text-zinc-600 tabular-nums">{formatHour(sess.started_at)}</span>
+              </div>
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex gap-5">
+                  <Metric value={formatDuration(sess.started_at, sess.finished_at)} label="dur" />
+                  {Number(sess.exercise_count) > 0 && (
+                    <Metric value={sess.exercise_count} label="ejerc" />
+                  )}
+                  {Number(sess.volume) > 0 && (
+                    <Metric value={Number(sess.volume).toLocaleString('es')} label="kg" />
+                  )}
+                </div>
+                <ExerciseThumbs thumbs={thumbs} extra={extraThumbs} />
+              </div>
+            </button>
+          )
+        })}
       </main>
     </div>
   )

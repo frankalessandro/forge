@@ -15,7 +15,6 @@ import RankCard from '../../components/features/RankCard'
 import TutorialGuide from '../../components/features/TutorialGuide'
 const ProgressChart = lazy(() => import('../../components/features/ProgressChart'))
 import {
-  ACTIVITY_LEVELS,
   calcAge,
   calcBMI,
   bmiCategory,
@@ -170,7 +169,6 @@ export default function Profile() {
   const weightRange = healthyWeightRange(heightNum)
 
   const rank = rankForXp(xp)
-  const activityLabel = ACTIVITY_LEVELS.find((a) => a.value === profile?.activity_level)?.label
   const chartData = [...bodyStats].reverse().map((s) => ({ date: formatDateShort(s.recorded_at), weight: Number(s.weight_kg) }))
 
   return (
@@ -213,20 +211,17 @@ export default function Profile() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
-                      {profile?.name || 'Sin nombre'}
-                    </p>
+                  <p className="font-display font-bold uppercase tracking-tight text-xl text-zinc-100 leading-none truncate">
+                    {profile?.name || 'Sin nombre'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`chip ${rank.current.bg} ${rank.current.color}`}>{rank.current.name}</span>
                     {profile?.is_premium && (
                       <span className="chip bg-amber-400/15 text-amber-300 shrink-0">
                         <Crown size={12} />
                         Premium
                       </span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`chip ${rank.current.bg} ${rank.current.color}`}>{rank.current.name}</span>
-                    {activityLabel && <span className="chip-muted">{activityLabel}</span>}
                   </div>
                 </div>
               </div>
