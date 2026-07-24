@@ -1,0 +1,152 @@
+/* ============================================================
+   FORGE · Landing — primitivas de layout y movimiento
+   ------------------------------------------------------------
+   Regla de la landing: GSAP sólo para lo que depende del scroll o de
+   una coreografía. Todo bucle infinito (marquee, flotar, latir) vive
+   acá como keyframe de CSS: corre en el compositor, se pausa solo
+   fuera de pantalla y no ocupa un slot del ticker de GSAP para siempre.
+   ============================================================ */
+
+/* ---------- Ritmo vertical ---------------------------------
+   Un único par de valores para todas las secciones. Antes cada una
+   traía su propio `py-24 sm:py-32` y los saltos no coincidían entre
+   las que tenían halo de fondo y las que no. */
+.landing-section {
+  padding-block: clamp(4.5rem, 9vw, 7.5rem);
+}
+.landing-wrap {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 640px) {
+  .landing-wrap {
+    padding-inline: 2rem;
+  }
+}
+/* Bajada de sección: mismo aire bajo cada título en toda la página. */
+.landing-lead {
+  margin-top: 1.5rem;
+  max-width: 42rem;
+  line-height: 1.75;
+}
+
+/* ---------- Títulos ----------------------------------------
+   Se animan por palabra, no por letra. Un título de 20 letras pasa de
+   20 nodos animados (cada uno con su `will-change`, o sea 20 capas de
+   GPU) a 3. Y de paso desaparece la máscara `overflow: hidden` que
+   recortaba las tildes y la ~ de la Ñ en mayúsculas. */
+.split {
+  /* La tilde de una mayúscula sobresale por encima de la altura de
+     caja; con `leading` menor a 1 se metía en la línea de arriba. */
+  padding-top: 0.08em;
+}
+.split-word {
+  display: inline-block;
+  margin-right: 0.24em;
+}
+.split-line:last-child .split-word:last-child {
+  margin-right: 0;
+}
+
+/* ---------- Marquee -----------------------------------------
+   Los items se renderizan dos veces y el track viaja -50%: el loop
+   cierra exacto. Antes era un tween infinito + un ScrollTrigger global
+   que recalculaba un skew en cada frame de scroll. */
+@keyframes marquee-left {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@keyframes marquee-right {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-left var(--dur, 40s) linear infinite;
+}
+.marquee-track[data-dir='back'] {
+  animation-name: marquee-right;
+}
+
+/* ---------- Micro-movimientos -------------------------------
+   A propósito son pocos: las 3 tarjetas del hero y la flecha del
+   scroll. El resto de lo que antes latía o rotaba se quitó. */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translate3d(0, -7px, 0);
+  }
+  50% {
+    transform: translate3d(0, 7px, 0);
+  }
+}
+.float-card {
+  animation: float-y var(--dur, 7s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes nudge-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(7px);
+  }
+}
+.nudge {
+  animation: nudge-y 1.6s ease-in-out infinite;
+}
+
+/* ---------- Halos de color ----------------------------------
+   `radial-gradient` en vez de `bg-accent/10 blur-[140px]`. Mismo
+   resultado visual, pero un blur de 140px obliga al navegador a
+   desenfocar una capa de 500×500 en cada repintado: era, de lejos,
+   lo más caro de pintar en toda la landing. */
+.glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle closest-side,
+    color-mix(in srgb, var(--color-accent) var(--glow, 13%), transparent),
+    transparent 100%
+  );
+}
+
+/* ---------- FAQ ---------------------------------------------
+   `grid-template-rows: 0fr → 1fr` anima hasta la altura real del
+   contenido sin medirla en JS ni forzar un reflow por apertura. */
+.faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease;
+}
+.faq-panel[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.faq-panel > div {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .float-card,
+  .nudge {
+    animation: none !important;
+  }
+}

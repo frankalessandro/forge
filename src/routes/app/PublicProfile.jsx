@@ -5,7 +5,6 @@ import { useAuthStore } from '../../stores/authStore'
 import { useFriends } from '../../hooks/useFriends'
 import { rankForXp } from '../../utils/ranks'
 import { formatUserTag } from '../../utils/userTag'
-import { GOAL_LABELS } from '../../utils/routineTemplates'
 import PageHeader from '../../components/ui/PageHeader'
 import { logError } from '../../utils/logError'
 
@@ -121,7 +120,6 @@ export default function PublicProfile() {
                       Premium
                     </span>
                   )}
-                  {friend.goal && <span className="chip-muted">{GOAL_LABELS[friend.goal] ?? friend.goal}</span>}
                 </div>
               </div>
             </div>

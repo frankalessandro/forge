@@ -8,6 +8,7 @@ import Splash from './components/ui/Splash'
 
 // Lazy: cada ruta se descarga en su propio chunk (carga inicial mucho más liviana;
 // recharts, por ejemplo, queda aislado en el chunk del Perfil).
+const Landing = lazy(() => import('./routes/Landing'))
 const Login = lazy(() => import('./routes/auth/Login'))
 const Register = lazy(() => import('./routes/auth/Register'))
 const AppLayout = lazy(() => import('./routes/app/AppLayout'))
@@ -63,7 +64,7 @@ function RootRedirect() {
   const ready = useAuthStore((s) => s.ready)
   const needsOnboarding = useAuthStore((s) => s.needsOnboarding)
   if (!ready) return <Splash />
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAuthenticated) return page(<Landing />)
   if (needsOnboarding) return <Navigate to="/app/onboarding" replace />
   return <Navigate to="/app/dashboard" replace />
 }

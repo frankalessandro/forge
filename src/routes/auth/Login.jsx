@@ -130,7 +130,7 @@ function GoogleIcon() {
 
 export function BrandMark() {
   return (
-    <div className="flex flex-col items-center text-center">
+    <Link to="/" className="flex flex-col items-center text-center">
       <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center glow-accent">
         <Dumbbell size={28} className="text-ink-950" strokeWidth={2.5} />
       </div>
@@ -138,7 +138,7 @@ export function BrandMark() {
         Forge
       </p>
       <p className="eyebrow mt-2">Forjá tu progreso</p>
-    </div>
+    </Link>
   )
 }
 
